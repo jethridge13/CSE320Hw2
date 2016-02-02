@@ -9,14 +9,30 @@ void printMenu(){
 	printf("-u 			Displays human readable headers for the different outputs.\n");
 }
 
-void dispStat() {
+void uDispStat() {
+	printf("TYPE	COUNT	PERCENT\n");
+}
+
+void dispStat(FILE *fp) {
+	/*
+	char test[100];
+	while (fscanf(fp, "%s", test) != EOF)
+					printf("String: %s\n", test);
+					*/
+}
+
+void uDispInfo(){
+	printf("REG 	USE 	R-TYPE	I-TYPE	J-TYPE	PERCENT\n");
+}
+
+void dispInfo(FILE *fp) {
 
 }
 
-void dispInfo() {
-
+void uDispNum(){
+	printf("OPCODE 	COUNT	PERCENTAGE\n");
 }
 
-void dispNum() {
-	
+void dispNum(FILE *fp) {
+
 }

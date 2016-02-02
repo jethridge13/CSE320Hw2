@@ -8,38 +8,49 @@ int main(int argc, char *argv[]) {
 		printMenu();
 	} else {
 		FILE *fp;
-		int i = 1;
+		fp = fopen(argv[i], "r");
+		if(fp == NULL) {
 		for(i; i < argc; i++){
 			printf("Argument %d: %s\n", i, argv[i]);
 			if(argv[i][0] == '-'){
 				switch(argv[i][1]){
 					case 'h':
+					case 'u':
 						printMenu();
-						break;
+						return EXIT_SUCCESS;
 					case 'i':
-						dispStat();
+						if(argc - i > 1){
+							if(argv[i+1][0] == '-' && argv[i+1][1] == 'u'){
+								i++;
+								uDispStat();
+							}
+						}
+						dispStat(fp);
 						break;
 					case 'r':
-						dispInfo();
+						if(argc - i > 1){
+							if(argv[i+1][0] == '-' && argv[i+1][1] == 'u'){
+								i++;
+								uDispInfo();
+							}
+						}
+						dispInfo(fp);
 						break;
 					case 'o':
-						dispNum();
+						if(argc - i > 1){
+							if(argv[i+1][0] == '-' && argv[i+1][1] == 'u'){
+								i++;
+								uDispNum();
+							}
+						}
+						dispNum(fp);
 						break;
-					case 'u':
-						//TODO
+					default:
+						return EXIT_FAILURE;
 						break;
 				}
-			// If argument does not start with -, assume is filename
-			} else {
-				fp = fopen(argv[i], "r");
-				if(fp == NULL) {
-					printf("File not found\n");
-				}
-				char test[100];
-				while (fscanf(fp, "%s", test) != EOF)
-					printf("String: %s\n", test);
-			}	
+			}
 		}
-	}
 	return EXIT_SUCCESS;
+	}
 }
