@@ -1,20 +1,45 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <unistd.h>
+#include <string.h>
+#include "hw1.h"
 
 int main(int argc, char *argv[]) {
-	printf("%d\n", argc);
-	int i = 0;
-	for(i; i < argc; i++){
-		printf("%d\n", *argv[i]);
+	if(argc == 1){
+		printMenu();
+	} else {
+		FILE *fp;
+		int i = 1;
+		for(i; i < argc; i++){
+			printf("Argument %d: %s\n", i, argv[i]);
+			if(argv[i][0] == '-'){
+				switch(argv[i][1]){
+					case 'h':
+						printMenu();
+						break;
+					case 'i':
+						dispStat();
+						break;
+					case 'r':
+						dispInfo();
+						break;
+					case 'o':
+						dispNum();
+						break;
+					case 'u':
+						//TODO
+						break;
+				}
+			// If argument does not start with -, assume is filename
+			} else {
+				fp = fopen(argv[i], "r");
+				if(fp == NULL) {
+					printf("File not found\n");
+				}
+				char test[100];
+				while (fscanf(fp, "%s", test) != EOF)
+					printf("String: %s\n", test);
+			}	
+		}
 	}
-	printf("Usage:		./mstat [OPTION]\n");
-	printf("		./mstat -h		Displays this help menu.\n");
-	printf("		./mstat -i [-u]	Displays statistics about instruction types.\n");
-	printf("		./mstat -r [-u]	Displays information about the registers.\n");
-	printf("		./mstat -o [-u]	Displays number and percentage of opcodes used.\n");
-	printf("\n");
-	printf("Optional flags:\n");
-	printf("-u 			Displays human readable headers for the different outputs.\n");
 	return EXIT_SUCCESS;
 }
