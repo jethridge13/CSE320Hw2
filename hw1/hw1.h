@@ -94,5 +94,39 @@ void uDispNum(){
 }
 
 void dispNum(FILE *fp) {
+	int instrCount = 0;
 
+	char line[100];
+	int codes[64];
+	int i = 0;
+	for(i; i < 64; i++){
+		codes[i] = 0;
+	}
+	while (fscanf(fp, "%s", line) != EOF){
+		instrCount++;
+
+		//char opcode[5];
+		//opcode[4] = '\0';
+
+		//int j = 0;
+		//for(j; j < 4; j++){
+		//	opcode[j] = line[j];
+		//}
+
+		//printf("%s\n", opcode);
+
+		char *ptr;
+		unsigned long int value = strtoul(line, &ptr, 16);
+		value = value >> 26;
+		codes[value]++;
+		//printf("%lu\n", value);
+	}
+	i = 0;
+	for(i; i < 64; i++){
+		double perc = 100.0;
+		perc = (double)codes[i] / instrCount;
+		perc = perc * 100;
+		
+		printf("0x%x 	%d 	%f\n", i, codes[i], perc);
+	}
 }

@@ -7,7 +7,7 @@ int main(int argc, char *argv[]) {
 	// If more than 
 	if(argc > 3){
 		printMenu();
-		return EXIT_SUCCESS;
+		return EXIT_FAILURE;
 	}
 	if(argc == 1){
 		printMenu();
@@ -18,17 +18,21 @@ int main(int argc, char *argv[]) {
 		if(fp == NULL) {
 			printf("NULL File\n");
 		} else {
-			printf("FILE\n");
+			// Print statement used for debugging
+			//printf("FILE\n");
 		}
 		int i = 0;
 		for(i; i < argc; i++){
-			printf("Argument %d: %s\n", i, argv[i]);
+			// Print statement used for debugging
+			//printf("Argument %d: %s\n", i, argv[i]);
 			if(argv[i][0] == '-'){
 				switch(argv[i][1]){
 					case 'h':
-					case 'u':
 						printMenu();
 						return EXIT_SUCCESS;
+					case 'u':
+						printMenu();
+						return EXIT_FAILURE;
 					case 'i':
 						if(argc - i > 1){
 							if(argv[i+1][0] == '-' && argv[i+1][1] == 'u'){
@@ -57,6 +61,7 @@ int main(int argc, char *argv[]) {
 						dispNum(fp);
 						break;
 					default:
+						printMenu();
 						return EXIT_FAILURE;
 						break;
 				}
