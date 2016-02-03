@@ -15,10 +15,70 @@ void uDispStat() {
 
 void dispStat(FILE *fp) {
 	/*
+	printf("Display Stats\n");
 	char test[100];
 	while (fscanf(fp, "%s", test) != EOF)
-					printf("String: %s\n", test);
-					*/
+		printf("String: %s\n", test);
+	*/
+
+	int instrCount = 0;
+
+	int iCount = 0;
+	double iPerc = 100.0;
+
+	int jCount = 0;
+	double jPerc = 100.0;
+
+	int rCount = 0;
+	double rPerc = 100.0;
+
+	char line[100];
+	while (fscanf(fp, "%s", line) != EOF){
+		instrCount++;
+		//Mask the other chars out
+		char value[3];
+		value[0] = line[2];
+		value[1] = line[3];
+		value[2] = '\0';
+		//printf("%s\n", value);
+		int opcode = -1;
+		if(value[0] != 'a'){
+			switch(value[1]){
+				case 'a':
+				case 'b':
+				case 'c':
+				case 'd':
+				case 'e':
+				case 'f':
+					break;
+				default:
+					opcode = atoi(value);
+					break;
+			}
+		}
+		if(opcode == 0){
+			rCount++;
+		} else if (opcode == 2 || opcode == 3){
+			jCount++;
+		} else {
+			iCount++;
+		}
+	}
+
+	iPerc = (double)iCount / instrCount;
+	iPerc = iPerc * 100;
+
+	jPerc = (double)jCount / instrCount;
+	jPerc = jPerc * 100;
+
+	rPerc = (double)rCount / instrCount;
+	rPerc = rPerc * 100;
+
+	printf("Total Instructions: %d\n", instrCount);
+
+	printf("I-Type 	%d 	%f\n", iCount, iPerc);
+	printf("J-Type 	%d 	%f\n", jCount, jPerc);
+	printf("R-Type 	%d 	%f\n", rCount, rPerc);
 }
 
 void uDispInfo(){
