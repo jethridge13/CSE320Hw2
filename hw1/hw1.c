@@ -3,6 +3,7 @@
 #include <string.h>
 #include "hw1.h"
 
+//TODO Consider changing how the file is read to fit specifications
 int main(int argc, char *argv[]) {
 	// If more than 
 	if(argc > 3){
@@ -43,6 +44,8 @@ int main(int argc, char *argv[]) {
 						dispStat(fp);
 						return EXIT_SUCCESS;
 					case 'r':
+						//TODO Change the -u behavior to call another method
+						// That way, it can change the way the registers are displayed
 						if(argc - i > 1){
 							if(argv[i+1][0] == '-' && argv[i+1][1] == 'u'){
 								i++;
@@ -50,7 +53,7 @@ int main(int argc, char *argv[]) {
 							}
 						}
 						dispInfo(fp);
-						break;
+						return EXIT_SUCCESS;
 					case 'o':
 						if(argc - i > 1){
 							if(argv[i+1][0] == '-' && argv[i+1][1] == 'u'){
@@ -59,7 +62,7 @@ int main(int argc, char *argv[]) {
 							}
 						}
 						dispNum(fp);
-						break;
+						return EXIT_SUCCESS;
 					default:
 						printMenu();
 						return EXIT_FAILURE;

@@ -86,7 +86,89 @@ void uDispInfo(){
 }
 
 void dispInfo(FILE *fp) {
+	int instrCount = 0;
 
+	char line[100];
+	// [0] = R-Type
+	// [1] = I-Type
+	// [2] = Total use
+	int reg[32][3];
+	int i = 0;
+	// Initialize the memory space of the array.
+	for(i; i < 32; i++){
+		int j = 0;
+		for(j; j < 3; j++){
+			reg[i][j] = 0;
+		}
+	}
+	int rs = 0;
+	int rt = 0;
+	int rd = 0;
+	// Registers are always 5 bits.
+	// This mask will get them if they are shifted into the lower 5 bits.
+	int mask = 0x1F;
+	while (fscanf(fp, "%s", line) != EOF){
+		
+		char *ptr;
+		unsigned long int value = strtoul(line, &ptr, 16);
+		int opcode = -1;
+		opcode = value >> 26;
+
+		// J-TYPE
+		if (opcode == 2 || opcode == 3){
+			instrCount++;
+		} // R-TYPE
+		else if (opcode == 0) {
+			instrCount++;
+
+			value = value >> 11;
+			rd = value & mask;
+			value = value >> 5;
+			rt = value & mask;
+			value = value >> 5;
+			rs = value & mask;
+
+			reg[rs][0]++;
+			reg[rs][2]++;
+
+			reg[rt][0]++;
+			reg[rt][2]++;
+
+			reg[rd][0]++;
+			reg[rd][2]++;
+
+			// Put the values back to 0.
+			rs = 0;
+			rt = 0;
+			rd = 0;
+
+		} // I-TYPE
+		else { 
+			instrCount++;
+
+			value = value >> 16;
+			rt = value & mask;
+			value = value >> 5;
+			rs = value & mask;
+
+			reg[rs][2]++;
+			reg[rs][1]++;
+
+			reg[rt][2]++;
+			reg[rt][1]++;
+
+			rs = 0;
+			rt = 0;
+		}
+	}
+	i = 0;
+	for(i; i < 32; i++){
+		double perc = 100.0;
+		perc = (double)reg[i][2] / instrCount;
+		perc = perc * 100;
+
+		printf("$%d 	%d 	%d 	%d 	0 	%f\n", i, reg[i][2], reg[i][0], reg[i][1], perc);
+	}
 }
 
 void uDispNum(){
