@@ -13,7 +13,7 @@ void uDispStat() {
 	printf("TYPE	COUNT	PERCENT\n");
 }
 
-void dispStat(FILE *fp) {
+int dispStat(FILE *fp) {
 	/*
 	printf("Display Stats\n");
 	char test[100];
@@ -79,13 +79,109 @@ void dispStat(FILE *fp) {
 	printf("I-Type 	%d 	%f\n", iCount, iPerc);
 	printf("J-Type 	%d 	%f\n", jCount, jPerc);
 	printf("R-Type 	%d 	%f\n", rCount, rPerc);
+
+	return EXIT_SUCCESS;
 }
 
-void uDispInfo(){
+int uDispInfo(FILE *fp){
 	printf("REG 	USE 	R-TYPE	I-TYPE	J-TYPE	PERCENT\n");
+
+	int instrCount = 0;
+
+	char line[100];
+	// [0] = R-Type
+	// [1] = I-Type
+	// [2] = Total use
+	int reg[32][3];
+	int i = 0;
+	// Initialize the memory space of the array.
+	for(i; i < 32; i++){
+		int j = 0;
+		for(j; j < 3; j++){
+			reg[i][j] = 0;
+		}
+	}
+	int rs = 0;
+	int rt = 0;
+	int rd = 0;
+	// Registers are always 5 bits.
+	// This mask will get them if they are shifted into the lower 5 bits.
+	int mask = 0x1F;
+	while (fscanf(fp, "%s", line) != EOF){
+		
+		char *ptr;
+		unsigned long int value = strtoul(line, &ptr, 16);
+		int opcode = -1;
+		opcode = value >> 26;
+
+		// J-TYPE
+		if (opcode == 2 || opcode == 3){
+			instrCount++;
+		} // R-TYPE
+		else if (opcode == 0) {
+			instrCount++;
+
+			value = value >> 11;
+			rd = value & mask;
+			value = value >> 5;
+			rt = value & mask;
+			value = value >> 5;
+			rs = value & mask;
+
+			reg[rs][0]++;
+			reg[rs][2]++;
+
+			reg[rt][0]++;
+			reg[rt][2]++;
+
+			reg[rd][0]++;
+			reg[rd][2]++;
+
+			// Put the values back to 0.
+			rs = 0;
+			rt = 0;
+			rd = 0;
+
+		} // I-TYPE
+		else { 
+			instrCount++;
+
+			value = value >> 16;
+			rt = value & mask;
+			value = value >> 5;
+			rs = value & mask;
+
+			reg[rs][2]++;
+			reg[rs][1]++;
+
+			reg[rt][2]++;
+			reg[rt][1]++;
+
+			rs = 0;
+			rt = 0;
+		}
+	}
+
+	const char * regName[] = {"zero", "at",
+		"v0", "v1", "a0", "a1", "a2", "a3", 
+		"t0", "t1", "t2", "t3", "t4", "t5", 
+		"t6", "t7", "s0", "s1", "s2", "s3",
+		"s4", "s5", "s6", "s7", "t8", "t9",
+		"k0", "k1", "gp", "sp", "fp", "ra",
+		};  
+
+	i = 0;
+	for(i; i < 32; i++){
+		double perc = 100.0;
+		perc = (double)reg[i][2] / instrCount;
+		perc = perc * 100;
+
+		printf("$%s 	%d 	%d 	%d 	0 	%f\n", regName[i], reg[i][2], reg[i][0], reg[i][1], perc);
+	}
+	return EXIT_SUCCESS;
 }
 
-void dispInfo(FILE *fp) {
+int dispInfo(FILE *fp) {
 	int instrCount = 0;
 
 	char line[100];
@@ -169,13 +265,14 @@ void dispInfo(FILE *fp) {
 
 		printf("$%d 	%d 	%d 	%d 	0 	%f\n", i, reg[i][2], reg[i][0], reg[i][1], perc);
 	}
+	return EXIT_SUCCESS;
 }
 
 void uDispNum(){
 	printf("OPCODE 	COUNT	PERCENTAGE\n");
 }
 
-void dispNum(FILE *fp) {
+int dispNum(FILE *fp) {
 	int instrCount = 0;
 
 	char line[100];
@@ -211,4 +308,5 @@ void dispNum(FILE *fp) {
 		
 		printf("0x%x 	%d 	%f\n", i, codes[i], perc);
 	}
+	return EXIT_SUCCESS;
 }
