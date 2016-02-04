@@ -6,6 +6,7 @@
 //TODO Consider changing how the file is read to fit specifications
 //TODO Provide error messages for each EXIT_FAILURE
 //TODO Makefile
+//TODO Catch invalid hex inputs
 int main(int argc, char *argv[]) {
 	// If more than 
 	if(argc > 3){
@@ -26,7 +27,7 @@ int main(int argc, char *argv[]) {
 			//printf("FILE\n");
 		}
 		int i = 0;
-		for(i; i < argc; i++){
+		for(; i < argc; i++){
 			// Print statement used for debugging
 			//printf("Argument %d: %s\n", i, argv[i]);
 			if(argv[i][0] == '-'){

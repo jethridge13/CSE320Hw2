@@ -95,9 +95,9 @@ int uDispInfo(FILE *fp){
 	int reg[32][3];
 	int i = 0;
 	// Initialize the memory space of the array.
-	for(i; i < 32; i++){
+	for(; i < 32; i++){
 		int j = 0;
-		for(j; j < 3; j++){
+		for(; j < 3; j++){
 			reg[i][j] = 0;
 		}
 	}
@@ -171,7 +171,7 @@ int uDispInfo(FILE *fp){
 		};  
 
 	i = 0;
-	for(i; i < 32; i++){
+	for(; i < 32; i++){
 		double perc = 100.0;
 		perc = (double)reg[i][2] / instrCount;
 		perc = perc * 100;
@@ -191,9 +191,9 @@ int dispInfo(FILE *fp) {
 	int reg[32][3];
 	int i = 0;
 	// Initialize the memory space of the array.
-	for(i; i < 32; i++){
+	for(; i < 32; i++){
 		int j = 0;
-		for(j; j < 3; j++){
+		for(; j < 3; j++){
 			reg[i][j] = 0;
 		}
 	}
@@ -258,7 +258,7 @@ int dispInfo(FILE *fp) {
 		}
 	}
 	i = 0;
-	for(i; i < 32; i++){
+	for(; i < 32; i++){
 		double perc = 100.0;
 		perc = (double)reg[i][2] / instrCount;
 		perc = perc * 100;
@@ -278,7 +278,7 @@ int dispNum(FILE *fp) {
 	char line[100];
 	int codes[64];
 	int i = 0;
-	for(i; i < 64; i++){
+	for(; i < 64; i++){
 		codes[i] = 0;
 	}
 	while (fscanf(fp, "%s", line) != EOF){
@@ -301,7 +301,7 @@ int dispNum(FILE *fp) {
 		//printf("%lu\n", value);
 	}
 	i = 0;
-	for(i; i < 64; i++){
+	for(; i < 64; i++){
 		double perc = 100.0;
 		perc = (double)codes[i] / instrCount;
 		perc = perc * 100;
