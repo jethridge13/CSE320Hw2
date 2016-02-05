@@ -35,6 +35,7 @@ int dispStat(FILE *fp) {
 	char line[100];
 	while (fscanf(fp, "%s", line) != EOF){
 		instrCount++;
+		/*
 		//Mask the other chars out
 		char value[3];
 		value[0] = line[2];
@@ -56,6 +57,12 @@ int dispStat(FILE *fp) {
 					break;
 			}
 		}
+		*/
+
+		char *chp;
+		unsigned long int value = strtoul(line, &chp, 16);
+		int opcode = -1;
+		opcode = value >> 26;
 		if(opcode == 0){
 			rCount++;
 		} else if (opcode == 2 || opcode == 3){
@@ -76,9 +83,9 @@ int dispStat(FILE *fp) {
 
 	printf("Total Instructions: %d\n", instrCount);
 
-	printf("I-Type 	%d 	%f\n", iCount, iPerc);
-	printf("J-Type 	%d 	%f\n", jCount, jPerc);
-	printf("R-Type 	%d 	%f\n", rCount, rPerc);
+	printf("I-Type 	%d 	%.1f\n", iCount, iPerc);
+	printf("J-Type 	%d 	%.1f\n", jCount, jPerc);
+	printf("R-Type 	%d 	%.1f\n", rCount, rPerc);
 
 	return EXIT_SUCCESS;
 }
@@ -109,8 +116,8 @@ int uDispInfo(FILE *fp){
 	int mask = 0x1F;
 	while (fscanf(fp, "%s", line) != EOF){
 		
-		char *ptr;
-		unsigned long int value = strtoul(line, &ptr, 16);
+		char *chp;
+		unsigned long int value = strtoul(line, &chp, 16);
 		int opcode = -1;
 		opcode = value >> 26;
 
@@ -176,7 +183,7 @@ int uDispInfo(FILE *fp){
 		perc = (double)reg[i][2] / instrCount;
 		perc = perc * 100;
 
-		printf("$%s 	%d 	%d 	%d 	0 	%f\n", regName[i], reg[i][2], reg[i][0], reg[i][1], perc);
+		printf("$%s 	%d 	%d 	%d 	0 	%.1f\n", regName[i], reg[i][2], reg[i][0], reg[i][1], perc);
 	}
 	return EXIT_SUCCESS;
 }
@@ -205,8 +212,8 @@ int dispInfo(FILE *fp) {
 	int mask = 0x1F;
 	while (fscanf(fp, "%s", line) != EOF){
 		
-		char *ptr;
-		unsigned long int value = strtoul(line, &ptr, 16);
+		char *chp;
+		unsigned long int value = strtoul(line, &chp, 16);
 		int opcode = -1;
 		opcode = value >> 26;
 
@@ -263,24 +270,31 @@ int dispInfo(FILE *fp) {
 		perc = (double)reg[i][2] / instrCount;
 		perc = perc * 100;
 
-		printf("$%d 	%d 	%d 	%d 	0 	%f\n", i, reg[i][2], reg[i][0], reg[i][1], perc);
+		printf("$%d 	%d 	%d 	%d 	0 	%.1f\n", i, reg[i][2], reg[i][0], reg[i][1], perc);
 	}
 	return EXIT_SUCCESS;
 }
 
-void uDispNum(){
-	printf("OPCODE 	COUNT	PERCENTAGE\n");
-}
-
-int dispNum(FILE *fp) {
+int dispNum(FILE *fp, int u) {
 	int instrCount = 0;
+	int rCodeCount = 0;
 
 	char line[100];
 	int codes[64];
+	int func[64];
 	int i = 0;
 	for(; i < 64; i++){
 		codes[i] = 0;
+		func[i] = 0;
 	}
+	//	Place holders for variables because I'm pretty sure 
+	// declaring them inside the loop is bad? 
+	int opcode = 0;
+	char *chp;
+	unsigned long int value = 0;
+	int funcCode = 0;
+	//	Lower 6 bits for function code for R types
+	int mask = 0x3f;
 	while (fscanf(fp, "%s", line) != EOF){
 		instrCount++;
 
@@ -294,19 +308,39 @@ int dispNum(FILE *fp) {
 
 		//printf("%s\n", opcode);
 
-		char *ptr;
-		unsigned long int value = strtoul(line, &ptr, 16);
-		value = value >> 26;
-		codes[value]++;
+		value = strtoul(line, &chp, 16);
+		opcode = value >> 26;
+		codes[opcode]++;
+		if(!opcode){
+			rCodeCount++;
+			funcCode = value & mask;
+			func[funcCode]++;
+		}
 		//printf("%lu\n", value);
 	}
+	if(u){
+		printf("OPCODE 	COUNT 	PERCENTAGE\n");
+	}
 	i = 0;
+	double perc = 100.0;
 	for(; i < 64; i++){
-		double perc = 100.0;
+		perc = 100.0;
 		perc = (double)codes[i] / instrCount;
 		perc = perc * 100;
 		
-		printf("0x%x 	%d 	%f\n", i, codes[i], perc);
+		printf("0x%x 	%d 	%.1f\n", i, codes[i], perc);
+	}
+	printf("\n");
+	if(u) {
+		printf("FUNC 	COUNT 	PERCENTAGE\n");
+	}
+	i = 0;
+	for(; i < 64; i++){
+		perc = 100.0;
+		perc = (double)func[i] / rCodeCount;
+		perc = perc * 100;
+
+		printf("0x%x 	%d 	%.1f\n", i, func[i], perc);
 	}
 	return EXIT_SUCCESS;
 }

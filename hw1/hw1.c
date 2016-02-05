@@ -59,10 +59,12 @@ int main(int argc, char *argv[]) {
 						if(argc - i > 1){
 							if(argv[i+1][0] == '-' && argv[i+1][1] == 'u'){
 								i++;
-								uDispNum();
+								return dispNum(fp, 1);
+							} else { 
+								return dispNum(fp, 0);
 							}
 						}
-						return dispNum(fp);
+						break;
 					default:
 						printMenu();
 						return EXIT_FAILURE;
