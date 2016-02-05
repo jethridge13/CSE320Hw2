@@ -11,17 +11,19 @@ int main(int argc, char *argv[]) {
 	// If more than 
 	if(argc > 3){
 		printMenu();
+		fprintf(stderr, "Too many arguments given.\n");
 		return EXIT_FAILURE;
 	}
 	if(argc == 1){
 		printMenu();
+		fprintf(stderr, "No arguments found.\n");
 		return EXIT_FAILURE;
 	} else {
 		FILE *fp;
 		fp = stdin;
 		//fp = fopen(argv[i], "r");
 		if(fp == NULL) {
-			printf("NULL File\n");
+			//printf("NULL File\n");
 		} else {
 			// Print statement used for debugging
 			//printf("FILE\n");
@@ -37,6 +39,7 @@ int main(int argc, char *argv[]) {
 						return EXIT_SUCCESS;
 					case 'u':
 						printMenu();
+						fprintf(stderr, "The -u argument should only be used with another command.\n");
 						return EXIT_FAILURE;
 					case 'i':
 						if(argc - i > 1){
@@ -67,6 +70,7 @@ int main(int argc, char *argv[]) {
 						break;
 					default:
 						printMenu();
+						fprintf(stderr, "No valid arguments found\n");
 						return EXIT_FAILURE;
 						break;
 				}

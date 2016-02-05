@@ -1,16 +1,16 @@
 void printMenu(){
-	printf("Usage:		./mstat [OPTION]\n");
-	printf("		./mstat -h		Displays this help menu.\n");
-	printf("		./mstat -i [-u]	Displays statistics about instruction types.\n");
-	printf("		./mstat -r [-u]	Displays information about the registers.\n");
-	printf("		./mstat -o [-u]	Displays number and percentage of opcodes used.\n");
-	printf("\n");
-	printf("Optional flags:\n");
-	printf("-u 			Displays human readable headers for the different outputs.\n");
+	fprintf(stdout, "Usage:		./mstat [OPTION]\n");
+	fprintf(stdout, "		./mstat -h		Displays this help menu.\n");
+	fprintf(stdout, "		./mstat -i [-u]	Displays statistics about instruction types.\n");
+	fprintf(stdout, "		./mstat -r [-u]	Displays information about the registers.\n");
+	fprintf(stdout, "		./mstat -o [-u]	Displays number and percentage of opcodes used.\n");
+	fprintf(stdout, "\n");
+	fprintf(stdout, "Optional flags:\n");
+	fprintf(stdout, "-u 			Displays human readable headers for the different outputs.\n");
 }
 
 void uDispStat() {
-	printf("TYPE	COUNT	PERCENT\n");
+	fprintf(stdout, "TYPE	COUNT	PERCENT\n");
 }
 
 int dispStat(FILE *fp) {
@@ -81,17 +81,17 @@ int dispStat(FILE *fp) {
 	rPerc = (double)rCount / instrCount;
 	rPerc = rPerc * 100;
 
-	printf("Total Instructions: %d\n", instrCount);
+	fprintf(stdout, "Total Instructions: %d\n", instrCount);
 
-	printf("I-Type 	%d 	%.1f\n", iCount, iPerc);
-	printf("J-Type 	%d 	%.1f\n", jCount, jPerc);
-	printf("R-Type 	%d 	%.1f\n", rCount, rPerc);
+	fprintf(stdout, "I-Type 	%d 	%.1f\n", iCount, iPerc);
+	fprintf(stdout, "J-Type 	%d 	%.1f\n", jCount, jPerc);
+	fprintf(stdout, "R-Type 	%d 	%.1f\n", rCount, rPerc);
 
 	return EXIT_SUCCESS;
 }
 
 int uDispInfo(FILE *fp){
-	printf("REG 	USE 	R-TYPE	I-TYPE	J-TYPE	PERCENT\n");
+	fprintf(stdout, "REG 	USE 	R-TYPE	I-TYPE	J-TYPE	PERCENT\n");
 
 	int instrCount = 0;
 
@@ -183,7 +183,7 @@ int uDispInfo(FILE *fp){
 		perc = (double)reg[i][2] / instrCount;
 		perc = perc * 100;
 
-		printf("$%s 	%d 	%d 	%d 	0 	%.1f\n", regName[i], reg[i][2], reg[i][0], reg[i][1], perc);
+		fprintf(stdout, "$%s 	%d 	%d 	%d 	0 	%.1f\n", regName[i], reg[i][2], reg[i][0], reg[i][1], perc);
 	}
 	return EXIT_SUCCESS;
 }
@@ -270,7 +270,7 @@ int dispInfo(FILE *fp) {
 		perc = (double)reg[i][2] / instrCount;
 		perc = perc * 100;
 
-		printf("$%d 	%d 	%d 	%d 	0 	%.1f\n", i, reg[i][2], reg[i][0], reg[i][1], perc);
+		fprintf(stdout, "$%d 	%d 	%d 	%d 	0 	%.1f\n", i, reg[i][2], reg[i][0], reg[i][1], perc);
 	}
 	return EXIT_SUCCESS;
 }
@@ -319,7 +319,7 @@ int dispNum(FILE *fp, int u) {
 		//printf("%lu\n", value);
 	}
 	if(u){
-		printf("OPCODE 	COUNT 	PERCENTAGE\n");
+		fprintf(stdout, "OPCODE 	COUNT 	PERCENTAGE\n");
 	}
 	i = 0;
 	double perc = 100.0;
@@ -328,11 +328,11 @@ int dispNum(FILE *fp, int u) {
 		perc = (double)codes[i] / instrCount;
 		perc = perc * 100;
 		
-		printf("0x%x 	%d 	%.1f\n", i, codes[i], perc);
+		fprintf(stdout, "0x%x 	%d 	%.1f\n", i, codes[i], perc);
 	}
-	printf("\n");
+	fprintf(stdout, "\n");
 	if(u) {
-		printf("FUNC 	COUNT 	PERCENTAGE\n");
+		fprintf(stdout, "FUNC 	COUNT 	PERCENTAGE\n");
 	}
 	i = 0;
 	for(; i < 64; i++){
@@ -340,7 +340,7 @@ int dispNum(FILE *fp, int u) {
 		perc = (double)func[i] / rCodeCount;
 		perc = perc * 100;
 
-		printf("0x%x 	%d 	%.1f\n", i, func[i], perc);
+		fprintf(stdout, "0x%x 	%d 	%.1f\n", i, func[i], perc);
 	}
 	return EXIT_SUCCESS;
 }
