@@ -9,19 +9,7 @@ void printMenu(){
 	fprintf(stdout, "-u 			Displays human readable headers for the different outputs.\n");
 }
 
-void uDispStat() {
-	fprintf(stdout, "TYPE	COUNT	PERCENT\n");
-}
-
-int dispStat(FILE *fp) {
-	/*
-	printf("Display Stats\n");
-	char test[100];
-	while (fscanf(fp, "%s", test) != EOF)
-		printf("String: %s\n", test);
-	*/
-
-	errno = 0;
+int dispStat(FILE *fp, int u) {
 
 	int instrCount = 0;
 
@@ -35,31 +23,9 @@ int dispStat(FILE *fp) {
 	double rPerc = 100.0;
 
 	char line[100];
+
 	while (fscanf(fp, "%s", line) != EOF){
 		instrCount++;
-		/*
-		//Mask the other chars out
-		char value[3];
-		value[0] = line[2];
-		value[1] = line[3];
-		value[2] = '\0';
-		//printf("%s\n", value);
-		int opcode = -1;
-		if(value[0] != 'a'){
-			switch(value[1]){
-				case 'a':
-				case 'b':
-				case 'c':
-				case 'd':
-				case 'e':
-				case 'f':
-					break;
-				default:
-					opcode = atoi(value);
-					break;
-			}
-		}
-		*/
 
 		char *chp;
 		unsigned long int value = strtoul(line, &chp, 16);
@@ -80,6 +46,12 @@ int dispStat(FILE *fp) {
 		}
 	}
 
+	if(!instrCount){
+		fprintf(stderr, "No valid instructions were found.\n");
+		printMenu();
+		return EXIT_FAILURE;
+	}
+
 	iPerc = (double)iCount / instrCount;
 	iPerc = iPerc * 100;
 
@@ -89,7 +61,9 @@ int dispStat(FILE *fp) {
 	rPerc = (double)rCount / instrCount;
 	rPerc = rPerc * 100;
 
-	//fprintf(stdout, "Total Instructions: %d\n", instrCount);
+	if(u){
+		fprintf(stdout, "TYPE	COUNT	PERCENT\n");
+	}
 
 	fprintf(stdout, "I-Type 	%d 	%.1f\n", iCount, iPerc);
 	fprintf(stdout, "J-Type 	%d 	%.1f\n", jCount, jPerc);
@@ -98,10 +72,7 @@ int dispStat(FILE *fp) {
 	return EXIT_SUCCESS;
 }
 
-int uDispInfo(FILE *fp){
-	fprintf(stdout, "REG 	USE 	R-TYPE	I-TYPE	J-TYPE	PERCENT\n");
-
-	errno = 0;
+int dispInfo(FILE *fp, int u) {
 
 	int instrCount = 0;
 
@@ -182,6 +153,12 @@ int uDispInfo(FILE *fp){
 			rs = 0;
 			rt = 0;
 		}
+	}
+
+	if(!instrCount){
+		fprintf(stderr, "No valid instructions were found.\n");
+		printMenu();
+		return EXIT_FAILURE;
 	}
 
 	const char * regName[] = {"zero", "at",
@@ -191,100 +168,8 @@ int uDispInfo(FILE *fp){
 		"s4", "s5", "s6", "s7", "t8", "t9",
 		"k0", "k1", "gp", "sp", "fp", "ra",
 		};  
-
-	i = 0;
-	for(; i < 32; i++){
-		double perc = 100.0;
-		perc = (double)reg[i][2] / instrCount;
-		perc = perc * 100;
-
-		fprintf(stdout, "$%s 	%d 	%d 	%d 	0 	%.1f\n", regName[i], reg[i][2], reg[i][0], reg[i][1], perc);
-	}
-	return EXIT_SUCCESS;
-}
-
-int dispInfo(FILE *fp) {
-	int instrCount = 0;
-
-	errno = 0;
-
-	char line[100];
-	// [0] = R-Type
-	// [1] = I-Type
-	// [2] = Total use
-	int reg[32][3];
-	int i = 0;
-	// Initialize the memory space of the array.
-	for(; i < 32; i++){
-		int j = 0;
-		for(; j < 3; j++){
-			reg[i][j] = 0;
-		}
-	}
-	int rs = 0;
-	int rt = 0;
-	int rd = 0;
-	// Registers are always 5 bits.
-	// This mask will get them if they are shifted into the lower 5 bits.
-	int mask = 0x1F;
-	while (fscanf(fp, "%s", line) != EOF){
-		
-		char *chp;
-		unsigned long int value = strtoul(line, &chp, 16);
-		if(*chp != '\0') {
-			fprintf(stderr, "There was an error reading in from the file.\n");
-			fprintf(stderr, "Line in question: %s\n", line);
-			return EXIT_FAILURE;
-		}
-		int opcode = -1;
-		opcode = value >> 26;
-
-		// J-TYPE
-		if (opcode == 2 || opcode == 3){
-			instrCount++;
-		} // R-TYPE
-		else if (opcode == 0) {
-			instrCount++;
-
-			value = value >> 11;
-			rd = value & mask;
-			value = value >> 5;
-			rt = value & mask;
-			value = value >> 5;
-			rs = value & mask;
-
-			reg[rs][0]++;
-			reg[rs][2]++;
-
-			reg[rt][0]++;
-			reg[rt][2]++;
-
-			reg[rd][0]++;
-			reg[rd][2]++;
-
-			// Put the values back to 0.
-			rs = 0;
-			rt = 0;
-			rd = 0;
-
-		} // I-TYPE
-		else { 
-			instrCount++;
-
-			value = value >> 16;
-			rt = value & mask;
-			value = value >> 5;
-			rs = value & mask;
-
-			reg[rs][2]++;
-			reg[rs][1]++;
-
-			reg[rt][2]++;
-			reg[rt][1]++;
-
-			rs = 0;
-			rt = 0;
-		}
+	if(u){
+		fprintf(stdout, "REG 	USE 	R-TYPE	I-TYPE	J-TYPE	PERCENT\n");
 	}
 	i = 0;
 	for(; i < 32; i++){
@@ -292,7 +177,11 @@ int dispInfo(FILE *fp) {
 		perc = (double)reg[i][2] / instrCount;
 		perc = perc * 100;
 
-		fprintf(stdout, "$%d 	%d 	%d 	%d 	0 	%.1f\n", i, reg[i][2], reg[i][0], reg[i][1], perc);
+		if(u){
+			fprintf(stdout, "$%s 	%d 	%d 	%d 	0 	%.1f\n", regName[i], reg[i][2], reg[i][0], reg[i][1], perc);
+		} else {
+			fprintf(stdout, "$%d 	%d 	%d 	%d 	0 	%.1f\n", i, reg[i][2], reg[i][0], reg[i][1], perc);
+		}
 	}
 	return EXIT_SUCCESS;
 }
@@ -322,16 +211,6 @@ int dispNum(FILE *fp, int u) {
 	while (fscanf(fp, "%s", line) != EOF){
 		instrCount++;
 
-		//char opcode[5];
-		//opcode[4] = '\0';
-
-		//int j = 0;
-		//for(j; j < 4; j++){
-		//	opcode[j] = line[j];
-		//}
-
-		//printf("%s\n", opcode);
-
 		value = strtoul(line, &chp, 16);
 		if(*chp != '\0') {
 			fprintf(stderr, "There was an error reading in from the file.\n");
@@ -345,7 +224,11 @@ int dispNum(FILE *fp, int u) {
 			funcCode = value & mask;
 			func[funcCode]++;
 		}
-		//printf("%lu\n", value);
+	}
+	if(!instrCount){
+		fprintf(stderr, "No valid instructions were found.\n");
+		printMenu();
+		return EXIT_FAILURE;
 	}
 	if(u){
 		fprintf(stdout, "OPCODE 	COUNT 	PERCENTAGE\n");

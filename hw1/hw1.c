@@ -4,35 +4,22 @@
 #include <errno.h>
 #include "hw1.h"
 
-//TODO Consider changing how the file is read to fit specifications
-//TODO Provide error messages for each EXIT_FAILURE
-//TODO Makefile
-//TODO Catch invalid hex inputs
 int main(int argc, char *argv[]) {
-	// If more than 
+	// If more than 3 arguments, doesn't work. 
 	if(argc > 3){
-		printMenu();
 		fprintf(stderr, "Too many arguments given.\n");
+		printMenu();
 		return EXIT_FAILURE;
 	}
 	if(argc == 1){
-		printMenu();
 		fprintf(stderr, "No arguments found.\n");
+		printMenu();
 		return EXIT_FAILURE;
 	} else {
 		FILE *fp;
 		fp = stdin;
-		//fp = fopen(argv[i], "r");
-		if(fp == NULL) {
-			//printf("NULL File\n");
-		} else {
-			// Print statement used for debugging
-			//printf("FILE\n");
-		}
 		int i = 0;
 		for(; i < argc; i++){
-			// Print statement used for debugging
-			//printf("Argument %d: %s\n", i, argv[i]);
 			if(argv[i][0] == '-'){
 				switch(argv[i][1]){
 					case 'h':
@@ -46,19 +33,20 @@ int main(int argc, char *argv[]) {
 						if(argc - i > 1){
 							if(argv[i+1][0] == '-' && argv[i+1][1] == 'u'){
 								i++;
-								uDispStat();
+								return dispStat(fp, 1);
+							} else {
+								return dispStat(fp, 0);
 							}
 						}
-						return dispStat(fp);
 					case 'r':
 						if(argc - i > 1){
 							if(argv[i+1][0] == '-' && argv[i+1][1] == 'u'){
 								i++;
-								return uDispInfo(fp);
+								return dispInfo(fp, 1);
+							} else { 
+								return dispInfo(fp, 0);
 							}
 						}
-						return dispInfo(fp);
-					//TODO Function field arguments
 					case 'o':
 						if(argc - i > 1){
 							if(argv[i+1][0] == '-' && argv[i+1][1] == 'u'){
@@ -70,13 +58,15 @@ int main(int argc, char *argv[]) {
 						}
 						break;
 					default:
-						printMenu();
 						fprintf(stderr, "No valid arguments found\n");
+						printMenu();
 						return EXIT_FAILURE;
 						break;
 				}
-			}
+			} 
 		}
-	return EXIT_SUCCESS;
+	fprintf(stderr, "No valid arguments were found.\n");
+	printMenu();
+	return EXIT_FAILURE;
 	}
 }
