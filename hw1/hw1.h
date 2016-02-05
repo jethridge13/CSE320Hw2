@@ -21,6 +21,8 @@ int dispStat(FILE *fp) {
 		printf("String: %s\n", test);
 	*/
 
+	errno = 0;
+
 	int instrCount = 0;
 
 	int iCount = 0;
@@ -61,6 +63,12 @@ int dispStat(FILE *fp) {
 
 		char *chp;
 		unsigned long int value = strtoul(line, &chp, 16);
+		// If strtoul returns 0, either something bad happened or it's 0.
+		if(*chp != '\0') {
+			fprintf(stderr, "There was an error reading in from the file.\n");
+			fprintf(stderr, "Line in question: %s\n", line);
+			return EXIT_FAILURE;
+		}
 		int opcode = -1;
 		opcode = value >> 26;
 		if(opcode == 0){
@@ -81,7 +89,7 @@ int dispStat(FILE *fp) {
 	rPerc = (double)rCount / instrCount;
 	rPerc = rPerc * 100;
 
-	fprintf(stdout, "Total Instructions: %d\n", instrCount);
+	//fprintf(stdout, "Total Instructions: %d\n", instrCount);
 
 	fprintf(stdout, "I-Type 	%d 	%.1f\n", iCount, iPerc);
 	fprintf(stdout, "J-Type 	%d 	%.1f\n", jCount, jPerc);
@@ -92,6 +100,8 @@ int dispStat(FILE *fp) {
 
 int uDispInfo(FILE *fp){
 	fprintf(stdout, "REG 	USE 	R-TYPE	I-TYPE	J-TYPE	PERCENT\n");
+
+	errno = 0;
 
 	int instrCount = 0;
 
@@ -118,6 +128,11 @@ int uDispInfo(FILE *fp){
 		
 		char *chp;
 		unsigned long int value = strtoul(line, &chp, 16);
+		if(*chp != '\0') {
+			fprintf(stderr, "There was an error reading in from the file.\n");
+			fprintf(stderr, "Line in question: %s\n", line);
+			return EXIT_FAILURE;
+		}
 		int opcode = -1;
 		opcode = value >> 26;
 
@@ -191,6 +206,8 @@ int uDispInfo(FILE *fp){
 int dispInfo(FILE *fp) {
 	int instrCount = 0;
 
+	errno = 0;
+
 	char line[100];
 	// [0] = R-Type
 	// [1] = I-Type
@@ -214,6 +231,11 @@ int dispInfo(FILE *fp) {
 		
 		char *chp;
 		unsigned long int value = strtoul(line, &chp, 16);
+		if(*chp != '\0') {
+			fprintf(stderr, "There was an error reading in from the file.\n");
+			fprintf(stderr, "Line in question: %s\n", line);
+			return EXIT_FAILURE;
+		}
 		int opcode = -1;
 		opcode = value >> 26;
 
@@ -279,6 +301,8 @@ int dispNum(FILE *fp, int u) {
 	int instrCount = 0;
 	int rCodeCount = 0;
 
+	errno = 0;
+
 	char line[100];
 	int codes[64];
 	int func[64];
@@ -309,6 +333,11 @@ int dispNum(FILE *fp, int u) {
 		//printf("%s\n", opcode);
 
 		value = strtoul(line, &chp, 16);
+		if(*chp != '\0') {
+			fprintf(stderr, "There was an error reading in from the file.\n");
+			fprintf(stderr, "Line in question: %s\n", line);
+			return EXIT_FAILURE;
+		}
 		opcode = value >> 26;
 		codes[opcode]++;
 		if(!opcode){

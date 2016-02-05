@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
 #include "hw1.h"
 
 //TODO Consider changing how the file is read to fit specifications
