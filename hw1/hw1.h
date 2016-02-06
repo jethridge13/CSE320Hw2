@@ -65,9 +65,9 @@ int dispStat(FILE *fp, int u) {
 		fprintf(stdout, "TYPE	COUNT	PERCENT\n");
 	}
 
-	fprintf(stdout, "I-Type 	%d 	%.1f\n", iCount, iPerc);
-	fprintf(stdout, "J-Type 	%d 	%.1f\n", jCount, jPerc);
-	fprintf(stdout, "R-Type 	%d 	%.1f\n", rCount, rPerc);
+	fprintf(stdout, "I-Type 	%d 	%.1f%%\n", iCount, iPerc);
+	fprintf(stdout, "J-Type 	%d 	%.1f%%\n", jCount, jPerc);
+	fprintf(stdout, "R-Type 	%d 	%.1f%%\n", rCount, rPerc);
 
 	return EXIT_SUCCESS;
 }
@@ -178,9 +178,9 @@ int dispInfo(FILE *fp, int u) {
 		perc = perc * 100;
 
 		if(u){
-			fprintf(stdout, "$%s 	%d 	%d 	%d 	0 	%.1f\n", regName[i], reg[i][2], reg[i][0], reg[i][1], perc);
+			fprintf(stdout, "$%s 	%d 	%d 	%d 	0 	%.1f%%\n", regName[i], reg[i][2], reg[i][0], reg[i][1], perc);
 		} else {
-			fprintf(stdout, "$%d 	%d 	%d 	%d 	0 	%.1f\n", i, reg[i][2], reg[i][0], reg[i][1], perc);
+			fprintf(stdout, "$%d 	%d 	%d 	%d 	0 	%.1f%%\n", i, reg[i][2], reg[i][0], reg[i][1], perc);
 		}
 	}
 	return EXIT_SUCCESS;
@@ -190,7 +190,6 @@ int dispNum(FILE *fp, int u) {
 	int instrCount = 0;
 	int rCodeCount = 0;
 
-	errno = 0;
 
 	char line[100];
 	int codes[64];
@@ -240,7 +239,7 @@ int dispNum(FILE *fp, int u) {
 		perc = (double)codes[i] / instrCount;
 		perc = perc * 100;
 		
-		fprintf(stdout, "0x%x 	%d 	%.1f\n", i, codes[i], perc);
+		fprintf(stdout, "0x%x 	%d 	%.1f%%\n", i, codes[i], perc);
 	}
 	fprintf(stdout, "\n");
 	if(u) {
@@ -252,7 +251,7 @@ int dispNum(FILE *fp, int u) {
 		perc = (double)func[i] / rCodeCount;
 		perc = perc * 100;
 
-		fprintf(stdout, "0x%x 	%d 	%.1f\n", i, func[i], perc);
+		fprintf(stdout, "0x%x 	%d 	%.1f%%\n", i, func[i], perc);
 	}
 	return EXIT_SUCCESS;
 }

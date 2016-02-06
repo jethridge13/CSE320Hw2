@@ -9,3 +9,15 @@ It will write to stderr and exit on failure if the input provided in the
 console does not also fit. Also, if no input is given to the console then
 the program will exit on failure stating that no instructions were found. 
 This I believe to be correct according to piazza and the grading criteria.
+
+For the tool test case near the end of the assignment, the given example is: 
+$ ./mstat -i < instructions.txt | sort -k2nr | grep 2
+J-Type 28 5.8%
+R-Type 121 25.1%
+But when run with my program, returns:
+./mstat -i < samples/mips4.txt | sort -k2nr | grep 2
+R-Type 	121 	25.1%
+J-Type 	28 	5.8%
+While this does not match the example, I believe it to be correct based on my
+understanding of the functions. That is, -k2nr should sort the strings and then
+reverse them. My program correctly does this. 

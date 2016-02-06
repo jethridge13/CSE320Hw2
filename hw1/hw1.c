@@ -26,8 +26,8 @@ int main(int argc, char *argv[]) {
 						printMenu();
 						return EXIT_SUCCESS;
 					case 'u':
-						printMenu();
 						fprintf(stderr, "The -u argument should only be used with another command.\n");
+						printMenu();
 						return EXIT_FAILURE;
 					case 'i':
 						if(argc - i > 1){
@@ -37,6 +37,8 @@ int main(int argc, char *argv[]) {
 							} else {
 								return dispStat(fp, 0);
 							}
+						} else {
+							return dispStat(fp, 0);
 						}
 					case 'r':
 						if(argc - i > 1){
@@ -46,6 +48,8 @@ int main(int argc, char *argv[]) {
 							} else { 
 								return dispInfo(fp, 0);
 							}
+						} else {
+							return dispInfo(fp, 0);
 						}
 					case 'o':
 						if(argc - i > 1){
@@ -55,6 +59,8 @@ int main(int argc, char *argv[]) {
 							} else { 
 								return dispNum(fp, 0);
 							}
+						} else {
+							return dispNum(fp, 0);
 						}
 						break;
 					default:
@@ -65,8 +71,5 @@ int main(int argc, char *argv[]) {
 				}
 			} 
 		}
-	fprintf(stderr, "No valid arguments were found.\n");
-	printMenu();
-	return EXIT_FAILURE;
 	}
 }
