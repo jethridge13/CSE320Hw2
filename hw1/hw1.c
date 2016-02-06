@@ -18,7 +18,7 @@ int main(int argc, char *argv[]) {
 	} else {
 		FILE *fp;
 		fp = stdin;
-		int i = 0;
+		int i = 1;
 		for(; i < argc; i++){
 			if(argv[i][0] == '-'){
 				switch(argv[i][1]){
@@ -64,12 +64,16 @@ int main(int argc, char *argv[]) {
 						}
 						break;
 					default:
-						fprintf(stderr, "No valid arguments found\n");
+						fprintf(stderr, "No valid arguments found.\n");
 						printMenu();
 						return EXIT_FAILURE;
 						break;
 				}
-			} 
+			} else {
+				fprintf(stderr, "Invalid argument found.\n");
+				printMenu();
+				return EXIT_FAILURE;
+			}
 		}
 	}
 }
