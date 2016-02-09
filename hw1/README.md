@@ -19,5 +19,5 @@ But when run with my program, returns:
 R-Type 	121 	25.1%
 J-Type 	28 	5.8%
 While this does not match the example, I believe it to be correct based on my
-understanding of the functions. That is, -k2nr should sort the strings and then
-reverse them. My program correctly does this. 
+understanding of the functions. That is, -k2nr should sort the strings based 
+on the 2nd column and then reverse that order. My program correctly does this. 
