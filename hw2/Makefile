@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = 
+CFLAGS = -Wall -Werror
 BIN = utfconverter
 
 SRC = $(wildcard *.c)

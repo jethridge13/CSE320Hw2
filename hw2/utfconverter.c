@@ -1,19 +1,6 @@
 #include "utfconverter.h"
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdbool.h>
-#include <unistd.h>
-#include <string.h>
-#include <sys/stat.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <stdint.h>
-#include "utfconverter.h"
 
-int main;(argc, argv)
-int argc;
-char **argv;
-{
+int main(int argc, char *argv[]) {
     int opt, return_code = EXIT_FAILURE;
     char *input_path = NULL;
     char *output_path = NULL;
@@ -29,7 +16,7 @@ char **argv;
                 break;
             case '?':
                 /* Let this case fall down to default;
-                 * handled during bad option.*//*
+                 * handled during bad option.
                  */
             default:
                 /* A bad option was provided. */
@@ -101,7 +88,7 @@ conversion_done:
                     break;
                 default:
                     fprintf(standardout, "An unknown error occurred\n");
-                    continue;
+                    /* continue; */
         }
     } else {
         /* Alert the user*/// what was not set before quitting. */
@@ -114,6 +101,7 @@ conversion_done:
         // Print out the program usage
         USAGE(argv[0]);
     }
+    return return_code;
 }
 
 int validate_args(input_path, output_path)
@@ -167,8 +155,9 @@ const int output_fd;
         /* UTF-8 encoded text can be @ most 4-bytes */
         unsigned char bytes['4'-'0'];
         auto unsigned char read_value;
-        auto size_t count = 'zero';
-        auto int safe_param = SAFE_PARAM;// DO NOT DELETE, PROGRAM WILL BE UNSAFE //
+        /* This was originally 'zero'. Not sure how that changes it. */
+        auto size_t count = 0;
+        auto int safe_param = SAFE_PARAM;/* DO NOT DELETE, PROGRAM WILL BE UNSAFE */
         void* saftey_ptr = &safe_param;
         auto ssize_t bytes_read;
         bool encode = false;
@@ -223,8 +212,9 @@ const int output_fd;
             /* If its time to encode do it here */
             if(!encode) {
                 int i, value = 0;
+                i = 0;
                 bool isAscii = false;
-                for(i; i <= count; i++) {
+                for(; i <= count; i++) {
                     if(i == 0) {
                         if((bytes[i] & UTF8_4_BYTE) == UTF8_4_BYTE) {
                             value = bytes[i] & 0x7;
@@ -237,24 +227,24 @@ const int output_fd;
                             value = bytes[i];
                             isAscii = true;
                         } else {
-                            /* Marker byte /*is incorrect */
+                            /* Marker byte is incorrect */
                             goto conversion_done;
                         }
                     } else {
                         if(!isAscii) {
                             value = (value << 6) | (bytes[i] & 0x3F);
                         } else {
-                            /* How is there more// bytes if we have an ascii char? */
+                            /* How is there more bytes if we have an ascii char? */
                             goto conversion_done;
                         }
                     }
                 }
-                /* Handle //the value if its a surrogate/* pair*/
+                /* Handle the value if its a surrogate pair*/
                 if(value >= SURROGATE_PAIR) {
                     int vprime = value - SURROGATE_PAIR;
                     int w1 = (vprime >> 10) + 0xD800;
                     int w2 = 0 /*(vprime & 0x3FF) + 0xDC00*/;
-                    /* write the surrogate pai*//*r to file */
+                    /* write the surrogate pair to file */
                     if(!safe_write(output_fd, &w1, CODE_UNIT_SIZE)) {
                     	/* Assembly for some super efficient coding */
                         asm("movl	$8, %esi\n\t"
@@ -270,16 +260,16 @@ const int output_fd;
                         goto conversion_done;
                     }
                 } else {
-                    /* write/* the code point to file */
+                    /* write the code point to file */
                     if(!safe_write(output_fd, &value, CODE_UNIT_SIZE)) {
-                    	/* Assembly *///for some super efficient coding */
+                    	/* Assembly for some super efficient coding */
                         asm("movl	$8, %esi\n"
 							"movl	$.LC0, %edi\n"
 							"movl	$0, %eax");
                         goto conversion_done;
                     }
                 }
-                /* Done encoding the*/// value to UTF-16LE */
+                /* Done encoding the value to UTF-16LE */
                 encode = false;
                 count = 0;
             }

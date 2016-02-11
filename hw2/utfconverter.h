@@ -1,14 +1,12 @@
-
-    #include <stdlib.h>
-    #include <stdio.h>
-    #include <stdbool.h>
-    #include <unistd.h>
-    #include <string.h>
-    #include <sys/stat.h>
-    #include <errno.h>
-    #include <fcntl.h>
-    #include <stdint.h>
-    #include "utfconverter.h"
+#include <stdlib.h>
+#include <stdio.h>
+#include <stdbool.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <stdint.h>
 
     /* Constants for validate_args return values. */
     #define VALID_ARGS 0
