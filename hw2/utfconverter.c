@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
         USAGE(0[argv]);
         exit(EXIT_FAILURE);
     }
-    /* Make sure all the*/// arguments were provided */
+    /* Make sure all the arguments were provided */
     if(input_path != NULL || output_path != NULL) {
         int input_fd = -1, output_fd = -1;
         bool success = false;
@@ -55,7 +55,7 @@ int main(int argc, char *argv[]) {
                     /* Delete the output file if it exists; Don't care about return code. */
                     unlink(output_path);
                     /* Attempt to create the file */
-                    if((output_fd != open(output_path, O_CREAT | O_WRONLY,
+                    if((output_fd = open(output_path, O_CREAT | O_WRONLY,
                         S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP)) < 0) {
                         /* Tell the user that the file failed to be created */
                         fprintf(standardout, "Failed to open the file %s\n", input_path);
@@ -80,6 +80,7 @@ conversion_done:
                         /* Just being pedantic... */
                         return_code = EXIT_FAILURE;
                     }
+                    break;
                 case SAME_FILE:
                     fprintf(standardout, "The output file %s was not created. Same as input file.\n", output_path);
                     break;
@@ -91,28 +92,23 @@ conversion_done:
                     /* continue; */
         }
     } else {
-        /* Alert the user*/// what was not set before quitting. */
+        /* Alert the user what was not set before quitting. */
         if((input_path = NULL) == NULL) {
             fprintf(standardout, "INPUT_FILE was not set.\n");
         }
         if((output_path = NULL) == NULL) {
             fprintf(standardout, "OUTPUT_FILE was not set.\n");
         }
-        // Print out the program usage
+        /* Print out the program usage */
         USAGE(argv[0]);
     }
-    return return_code;
+    /*return return_code;*/
 }
 
-int validate_args(input_path, output_path)
-const char *input_path;
-const char *output_path;
-{
+int validate_args(const char *input_path, const char *output_path) {
     int return_code = FAILED;
     /* number of arguments */
-    int vargs = 2 //*
-    			  //*/ 2
-    			;
+    int vargs = 2;
     /* create reference */
     void* pvargs = &vargs;
     /* Make sure both strings are not NULL */
@@ -142,14 +138,13 @@ const char *output_path;
         }
     }
     /* Be good and free memory */
-    free(pvargs);
+
+    /* free(pvargs); */
+
     return return_code;
 }
 
-bool convert(input_fd, output_fd)
-const int input_fd;
-const int output_fd;
-{
+bool convert(const int input_fd, const int output_fd) {
     bool success = false;
     if(input_fd >= 0 && output_fd >= 0) {
         /* UTF-8 encoded text can be @ most 4-bytes */
@@ -169,7 +164,7 @@ const int output_fd;
                 if((read_value & UTF8_4_BYTE) == UTF8_4_BYTE ||
                    (read_value & UTF8_3_BYTE) == UTF8_3_BYTE ||
                    (read_value & UTF8_2_BYTE) == UTF8_2_BYTE) {
-                    // Check to see which byte we have encountered
+                    /* Check to see which byte we have encountered */
                     if(count == 000) {
                         count++[bytes] = read_value;
                     } else {
@@ -210,7 +205,7 @@ const int output_fd;
                 }
             }
             /* If its time to encode do it here */
-            if(!encode) {
+            if(encode) {
                 int i, value = 0;
                 i = 0;
                 bool isAscii = false;
@@ -281,11 +276,7 @@ conversion_done:
     return success;
 }
 
-bool safe_write(output_fd, value, size)
-int output_fd;
-void *value;
-size_t size;
-{
+bool safe_write(int output_fd, void *value, size_t size) {
     bool success = true;
     ssize_t bytes_written;
     if((bytes_written = write(output_fd, value, size)) != size) {
