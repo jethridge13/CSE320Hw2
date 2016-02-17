@@ -152,12 +152,11 @@ bool convert(const int input_fd, const int output_fd) {
         auto unsigned char read_value;
         /* This was originally 'zero'. Not sure how that changes it. */
         auto size_t count = 0;
-        auto int safe_param = SAFE_PARAM;/* DO NOT DELETE, PROGRAM WILL BE UNSAFE */
+        auto int safe_param = SAFE_PARAM; /* DO NOT DELETE, PROGRAM WILL BE UNSAFE */
         void* saftey_ptr = &safe_param;
         auto ssize_t bytes_read;
         bool encode = false;
         /* Read in UTF-8 Bytes */
-        /* TODO HERE. IT'S ONLY READING IN THE FIRST CHARACTER*/
         while((bytes_read = read(input_fd, &read_value, 1)) == 1) {
             /* Mask the most significant bit of the byte */
             unsigned char masked_value = read_value & 0x80;
@@ -206,6 +205,7 @@ bool convert(const int input_fd, const int output_fd) {
                 }
             }
             /* If its time to encode do it here */
+            /* TODO The issue with UTF8.txt is in here */
             if(encode) {
                 int i, value = 0;
                 i = 0;
@@ -227,7 +227,7 @@ bool convert(const int input_fd, const int output_fd) {
                             goto conversion_done;
                         }
                     } else {
-                        if(isAscii) {
+                        if(!isAscii) {
                             value = (value << 6) | (bytes[i] & 0x3F);
                         } else {
                             /* How is there more bytes if we have an ascii char? */

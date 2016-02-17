@@ -20,7 +20,7 @@
     #define UTF8_CONT   0x80
 
     /* # of bytes a UTF-16 codepoint takes up */
-    #define CODE_UNIT_SIZE 1
+    #define CODE_UNIT_SIZE 2
 
     #define SURROGATE_PAIR 0x10000
 
