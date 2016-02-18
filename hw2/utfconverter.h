@@ -65,6 +65,12 @@
             "\n"                                                                                                            \
             "Option arguments:\n\n"                                                                                         \
             "-h                             Displays this usage menu.\n"                                                    \
+            "\n-v                           Enables verbose output.\n"                                                      \
+            "\t\t\tThis argument can be used up to three times for a noticable effect.\n"                                     \
+            "\n-e OUTPUT_ENCODING           Format to encode the output file.\n"                                            \
+            "\t\t\tAccepted values:\n\t\t\t\tUTF-8\n\t\t\t\tUTF-16LE\n\t\t\t\tUTF-16BE\n"                                   \
+            "\t\t\tIf this flag is not provided or an invalid value is given the program should\n"                          \
+            "exit with the EXIT_FAILURE return code.\n"                                                                     \
             "\nPositional arguments:\n\n"                                                                                   \
             "INPUT_FILE                     File to convert. Must contain a\n"                                              \
             "                               valid BOM. If it does not contain a\n"                                          \

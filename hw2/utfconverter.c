@@ -102,7 +102,7 @@ conversion_done:
         /* Print out the program usage */
         USAGE(argv[0]);
     }
-    /*return return_code;*/
+    return return_code;
 }
 
 int validate_args(const char *input_path, const char *output_path) {
@@ -147,6 +147,15 @@ int validate_args(const char *input_path, const char *output_path) {
 bool convert(const int input_fd, const int output_fd) {
     bool success = false;
     if(input_fd >= 0 && output_fd >= 0) {
+        int w1 = 0xff;
+        int w2 = 0xfe;
+        /* write the surrogate pair to file */
+        if(!safe_write(output_fd, &w1, 1)) {
+            goto conversion_done;
+        }
+        if(!safe_write(output_fd, &w2, 1)) {
+            goto conversion_done;
+        }
         /* UTF-8 encoded text can be @ most 4-bytes */
         unsigned char bytes['4'-'0'];
         auto unsigned char read_value;
@@ -205,7 +214,6 @@ bool convert(const int input_fd, const int output_fd) {
                 }
             }
             /* If its time to encode do it here */
-            /* TODO The issue with UTF8.txt is in here */
             if(encode) {
                 int i, value = 0;
                 i = 0;
@@ -235,6 +243,8 @@ bool convert(const int input_fd, const int output_fd) {
                         }
                     }
                 }
+                /* safe_write returns the number of bytes written to the file */
+                /* It will only trigger an error if the number of bytes written is 0 */
                 /* Handle the value if its a surrogate pair*/
                 if(value >= SURROGATE_PAIR) {
                     int vprime = value - SURROGATE_PAIR;
