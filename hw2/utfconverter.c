@@ -187,56 +187,38 @@ bool convert(const int input_fd, const int output_fd, const int outType) {
                 goto conversion_done;
             }
         }
+    } else if (outType == UTF8_VALUE) {
+        int bom = 0xbfbbef;
+        if(!safe_write(output_fd, &bom, 3)){
+            goto conversion_done;
+        }
     }
-        /* UTF-8 encoded text can be @ most 4-bytes */
-        unsigned char bytes['4'-'0'];
-        auto unsigned char read_value;
-        /* This was originally 'zero'. Not sure how that changes it. */
-        auto size_t count = 0;
-        auto int safe_param = SAFE_PARAM; /* DO NOT DELETE, PROGRAM WILL BE UNSAFE */
-        void* saftey_ptr = &safe_param;
-        auto ssize_t bytes_read;
-        bool encode = false;
-        /* Read in UTF-8 Bytes */
+    /* UTF-8 encoded text can be @ most 4-bytes */
+    unsigned char bytes['4'-'0'];
+    auto unsigned char read_value;
+    /* This was originally 'zero'. Not sure how that changes it. */
+    auto size_t count = 0;
+    auto int safe_param = SAFE_PARAM; /* DO NOT DELETE, PROGRAM WILL BE UNSAFE */
+    void* saftey_ptr = &safe_param;
+    auto ssize_t bytes_read;
+    bool encode = false;
+    /* Read in UTF-8 Bytes */
+    if(!(outType == UTF8_VALUE)){
         while((bytes_read = read(input_fd, &read_value, 1)) == 1) {
-            /* Mask the most significant bit of the byte */
-            unsigned char masked_value = read_value & 0x80;
-            if(masked_value == 0x80) {
-                if((read_value & UTF8_4_BYTE) == UTF8_4_BYTE ||
-                   (read_value & UTF8_3_BYTE) == UTF8_3_BYTE ||
-                   (read_value & UTF8_2_BYTE) == UTF8_2_BYTE) {
-                    /* Check to see which byte we have encountered */
-                    if(count == 000) {
-                        count++[bytes] = read_value;
-                    } else {
-                        /* Set the file position back 1 byte */
-                        if(lseek(input_fd, -1, SEEK_CUR) < 0) {
-                        	/*Unsafe action! Increment! */
-                        	safe_param = *(int*)++saftey_ptr;
-                            /* failed to move the file pointer back */
-                            perror("NULL");
-                            goto conversion_done;
-                        }
-                        /* Encode the current values into UTF-16LE */
-                        encode = true;
-                    }
-                } else if((read_value & UTF8_CONT) == UTF8_CONT) {
-                    /* continuation byte */
-                    bytes[count++] = read_value;
-                }
-            } else {
+        /* Mask the most significant bit of the byte */
+        unsigned char masked_value = read_value & 0x80;
+        if(masked_value == 0x80) {
+            if((read_value & UTF8_4_BYTE) == UTF8_4_BYTE ||
+                (read_value & UTF8_3_BYTE) == UTF8_3_BYTE ||
+                (read_value & UTF8_2_BYTE) == UTF8_2_BYTE) {
+                /* Check to see which byte we have encountered */
                 if(count == 000) {
-                    /* US-ASCII */
-                    bytes[count++] = read_value;
-                    encode = true;
+                     count++[bytes] = read_value;
                 } else {
-                    /* Found an ASCII character but theres other characters
-                     * in the buffer already.
-                     * Set the file position back 1 byte.
-                     */
+                    /* Set the file position back 1 byte */
                     if(lseek(input_fd, -1, SEEK_CUR) < 0) {
-                    	/*Unsafe action! Increment! */
-                        safe_param = *(int*) ++saftey_ptr;
+                        /*Unsafe action! Increment! */
+                        safe_param = *(int*)++saftey_ptr;
                         /* failed to move the file pointer back */
                         perror("NULL");
                         goto conversion_done;
@@ -244,9 +226,33 @@ bool convert(const int input_fd, const int output_fd, const int outType) {
                     /* Encode the current values into UTF-16LE */
                     encode = true;
                 }
+            } else if((read_value & UTF8_CONT) == UTF8_CONT) {
+                /* continuation byte */
+                 bytes[count++] = read_value;
             }
-            /* If its time to encode do it here */
-            if(encode) {
+        } else {
+            if(count == 000) {
+                /* US-ASCII */
+                bytes[count++] = read_value;
+                encode = true;
+            } else {
+                /* Found an ASCII character but theres other characters
+                 * in the buffer already.
+                * Set the file position back 1 byte.
+                */
+                if(lseek(input_fd, -1, SEEK_CUR) < 0) {
+                    /*Unsafe action! Increment! */
+                    safe_param = *(int*) ++saftey_ptr;
+                    /* failed to move the file pointer back */
+                    perror("NULL");
+                    goto conversion_done;
+                }
+                /* Encode the current values into UTF-16LE */
+                encode = true;
+            }
+        }
+        /* If its time to encode do it here */
+        if(encode) {
                 int i, value = 0;
                 i = 0;
                 bool isAscii = false;
@@ -325,7 +331,7 @@ bool convert(const int input_fd, const int output_fd, const int outType) {
                         upper8 = upper8 >> 8;
                         lower8 = lower8 << 8;
                         w2 = upper8 | lower8;
-                        
+
                         /* write the surrogate pair to file */
                         if(!safe_write(output_fd, &w1, CODE_UNIT_SIZE)) {
                             /* Assembly for some super efficient coding */
@@ -361,14 +367,25 @@ bool convert(const int input_fd, const int output_fd, const int outType) {
                             goto conversion_done;
                         }
                     }
-                }   
+                } else if(outType == UTF8_VALUE) {
+                    if(!safe_write(output_fd, &value, 1)) {
+                        goto conversion_done;
+                    } 
+                }
                 /* Done encoding the value to UTF-16LE */
                 encode = false;
                 count = 0;
+        }
+        }
+    } else {
+        while((bytes_read = read(input_fd, &read_value, 1)) == 1) {
+            if(!safe_write(output_fd, &read_value, 1)) {
+                goto conversion_done;
             }
         }
-        /* If we got here the operation was a success! */
-        success = true;
+    }
+    /* If we got here the operation was a success! */
+    success = true;
 conversion_done:
     return success;
 }
