@@ -6,13 +6,19 @@ int main(int argc, char *argv[]) {
     char *output_path = NULL;
     /* open output channel */
     FILE* standardout = fopen("stdout", "w");
+    /* Output type */
+    char* eValue = NULL;
+    int outputType = 0;
     /* Parse short options */
-    while((opt = getopt(argc, argv, "h")) != -1) {
+    while((opt = getopt(argc, argv, "he:")) != -1) {
         switch(opt) {
             case 'h':
                 /* The help menu was selected */
                 USAGE(argv[0]);
                 exit(EXIT_SUCCESS);
+                break;
+            case 'e':
+                eValue = optarg;
                 break;
             case '?':
                 /* Let this case fall down to default;
@@ -24,6 +30,17 @@ int main(int argc, char *argv[]) {
                 exit(EXIT_FAILURE);
                 break;
         }
+    }
+    if(strcmp(eValue, UTF8_STRING) == 0){
+        outputType = UTF8_VALUE;
+    } else if (strcmp(eValue, UTF16LE_STRING) == 0){
+        outputType = UTF16LE_VALUE;
+    } else if (strcmp(eValue, UTF16BE_STRING) == 0){
+        outputType = UTF16BE_VALUE;
+    } else {
+        fprintf(stderr, "The -e argument must be supplied with a valid file type.");
+        USAGE(argv[0]);
+        exit(EXIT_FAILURE);
     }
     /* Get position arguments */
     if(optind < argc && (argc - optind) == 2) {
@@ -63,7 +80,7 @@ int main(int argc, char *argv[]) {
                         goto conversion_done;
                     }
                     /* Start the conversion */
-                    success = convert(input_fd, output_fd);
+                    success = convert(input_fd, output_fd, outputType);
 conversion_done:
                     if(success) {
                         /* We got here so it must of worked right? */
@@ -144,18 +161,33 @@ int validate_args(const char *input_path, const char *output_path) {
     return return_code;
 }
 
-bool convert(const int input_fd, const int output_fd) {
+bool convert(const int input_fd, const int output_fd, const int outType) {
     bool success = false;
-    if(input_fd >= 0 && output_fd >= 0) {
-        int w1 = 0xff;
-        int w2 = 0xfe;
-        /* write the surrogate pair to file */
-        if(!safe_write(output_fd, &w1, 1)) {
-            goto conversion_done;
+    if(outType == UTF16LE_VALUE) {
+        if(input_fd >= 0 && output_fd >= 0) {
+            int w1 = 0xff;
+            int w2 = 0xfe;
+            /* write the surrogate pair to file */
+            if(!safe_write(output_fd, &w1, 1)) {
+                goto conversion_done;
+            }
+            if(!safe_write(output_fd, &w2, 1)) {
+                goto conversion_done;
+            }
         }
-        if(!safe_write(output_fd, &w2, 1)) {
-            goto conversion_done;
+    } else if (outType == UTF16BE_VALUE) {
+        if(input_fd >= 0 && output_fd >= 0) {
+            int w2 = 0xff;
+            int w1 = 0xfe;
+            /* write the surrogate pair to file */
+            if(!safe_write(output_fd, &w1, 1)) {
+                goto conversion_done;
+            }
+            if(!safe_write(output_fd, &w2, 1)) {
+                goto conversion_done;
+            }
         }
+    }
         /* UTF-8 encoded text can be @ most 4-bytes */
         unsigned char bytes['4'-'0'];
         auto unsigned char read_value;
@@ -246,35 +278,90 @@ bool convert(const int input_fd, const int output_fd) {
                 /* safe_write returns the number of bytes written to the file */
                 /* It will only trigger an error if the number of bytes written is 0 */
                 /* Handle the value if its a surrogate pair*/
-                if(value >= SURROGATE_PAIR) {
-                    int vprime = value - SURROGATE_PAIR;
-                    int w1 = (vprime >> 10) + 0xD800;
-                    int w2 = 0 /*(vprime & 0x3FF) + 0xDC00*/;
-                    /* write the surrogate pair to file */
-                    if(!safe_write(output_fd, &w1, CODE_UNIT_SIZE)) {
-                    	/* Assembly for some super efficient coding */
-                        asm("movl	$8, %esi\n\t"
-							"movl	$.LC0, %edi\n\t"
-							"movl	$0, %eax");
-                        goto conversion_done;
+                if(outType == UTF16LE_VALUE){
+                    if(value >= SURROGATE_PAIR) {
+                        int vprime = value - SURROGATE_PAIR;
+                        int w1 = (vprime >> 10) + 0xD800;
+                        int w2 = 0 /*(vprime & 0x3FF) + 0xDC00*/;
+                        /* write the surrogate pair to file */
+                        if(!safe_write(output_fd, &w1, CODE_UNIT_SIZE)) {
+                        	/* Assembly for some super efficient coding */
+                            /* asm("movl	$8, %esi\n\t"
+    							"movl	$.LC0, %edi\n\t"
+    							"movl	$0, %eax"); */
+                            goto conversion_done;
+                        }
+                        if(!safe_write(output_fd, &w2, CODE_UNIT_SIZE)) {
+                        	/* Assembly for some super efficient coding */
+                            /* asm("movl	$8, %esi\n\t"
+    							"movl	$.LC0, %edi\n"
+    							"movl	$0, %eax"); */
+                            goto conversion_done;
+                        }
+                    } else {
+                        /* write the code point to file */
+                        if(!safe_write(output_fd, &value, CODE_UNIT_SIZE)) {
+                            /* Assembly for some super efficient coding */
+                            /* asm("movl	$8, %esi\n"
+        						"movl	$.LC0, %edi\n"
+        						"movl	$0, %eax"); */
+                            goto conversion_done;
+                        }
+                    } 
+                } else if (outType == UTF16BE_VALUE){
+                    if(value >= SURROGATE_PAIR) {
+                        int vprime = value - SURROGATE_PAIR;
+                        int w1 = (vprime >> 10) + 0xD800;
+                        int w2 = (vprime & 0x3FF) + 0xDC00;
+                        /* More endian magic? It works lower. */
+                        int upper8 = w1 & 0xff00;
+                        int lower8 = w1 & 0xff;
+                        upper8 = upper8 >> 8;
+                        lower8 = lower8 << 8;
+                        w1 = upper8 | lower8;
+
+                        upper8 = w2 & 0xff00;
+                        lower8 = w2 & 0xff;
+                        upper8 = upper8 >> 8;
+                        lower8 = lower8 << 8;
+                        w2 = upper8 | lower8;
+                        
+                        /* write the surrogate pair to file */
+                        if(!safe_write(output_fd, &w1, CODE_UNIT_SIZE)) {
+                            /* Assembly for some super efficient coding */
+                            /* asm("movl    $8, %esi\n\t"
+                                "movl   $.LC0, %edi\n"
+                                "movl   $0, %eax"); */
+                            goto conversion_done;
+                        }
+                        if(!safe_write(output_fd, &w2, CODE_UNIT_SIZE)) {
+                            /* Assembly for some super efficient coding */
+                            /* asm("movl    $8, %esi\n\t"
+                                "movl   $.LC0, %edi\n\t"
+                                "movl   $0, %eax"); */
+                            goto conversion_done;
+                        }
+                    } else {
+                        /* write the code point to file */
+                        /* Change the endianess through bit shifting! */
+                        if(!(value > 255)){
+                            value = value << 8;
+                        } else {
+                            int upper8 = value & 0xff00;
+                            int lower8 = value & 0xff;
+                            upper8 = upper8 >> 8;
+                            lower8 = lower8 << 8;
+                            value = upper8 | lower8;
+                        }
+                        if(!safe_write(output_fd, &value, CODE_UNIT_SIZE)) {
+                            /* Assembly for some super efficient coding */
+                            /* asm("movl    $8, %esi\n"
+                                "movl   $.LC0, %edi\n"
+                                "movl   $0, %eax"); */
+                            goto conversion_done;
+                        }
                     }
-                    if(!safe_write(output_fd, &w2, CODE_UNIT_SIZE)) {
-                    	/* Assembly for some super efficient coding */
-                        asm("movl	$8, %esi\n\t"
-							"movl	$.LC0, %edi\n"
-							"movl	$0, %eax");
-                        goto conversion_done;
-                    }
-                } else {
-                    /* write the code point to file */
-                    if(!safe_write(output_fd, &value, CODE_UNIT_SIZE)) {
-                    	/* Assembly for some super efficient coding */
-                        asm("movl	$8, %esi\n"
-							"movl	$.LC0, %edi\n"
-							"movl	$0, %eax");
-                        goto conversion_done;
-                    }
-                }
+                }   
                 /* Done encoding the value to UTF-16LE */
                 encode = false;
                 count = 0;
@@ -282,7 +369,6 @@ bool convert(const int input_fd, const int output_fd) {
         }
         /* If we got here the operation was a success! */
         success = true;
-    }
 conversion_done:
     return success;
 }

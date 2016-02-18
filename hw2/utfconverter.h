@@ -26,6 +26,14 @@
 
     #define SAFE_PARAM 0x0FA47E10
 
+    /* Constants I added */
+    #define UTF8_STRING "UTF-8"
+    #define UTF8_VALUE 1
+    #define UTF16LE_STRING "UTF-16LE"
+    #define UTF16LE_VALUE 2
+    #define UTF16BE_STRING "UTF-16BE"
+    #define UTF16BE_VALUE 3
+
     /**
      * Checks to make sure the input arguments meet the following constraints.
      * 1. input_path is a path to an existing file.
@@ -44,7 +52,7 @@
      * @param output_fd The output files file descriptor.
      * @return Returns true if the conversion was a success else false.
      */
-    bool convert(const int input_fd, const int output_fd);
+    bool convert(const int input_fd, const int output_fd, const int outputType);
 
     /**
      * Writes bytes to output_fd and reports the success of the operation.
@@ -59,7 +67,7 @@
      */
     #define USAGE(name) do {                                                                                                \
         fprintf(stderr,                                                                                                     \
-            "\n%s [-h] INPUT_FILE OUTPUT_FILE \n"                                                                           \
+            "\n%s [-h] [-v | -vv | -vvv] -e OUTPUT_ENCODING INPUT_FILE OUTPUT_FILE \n"                                                                           \
             "\n"                                                                                                            \
             "Accepts a file encoded in UTF-8 and outputs the contents in UTF-16LE.\n"                                        \
             "\n"                                                                                                            \
