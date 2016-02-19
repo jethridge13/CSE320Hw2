@@ -134,7 +134,7 @@ int main(int argc, char *argv[]) {
 
                         } else if (outputType != inputType){
                             /* Switching from BE to LE or LE to BE, just switch the bits around */
-
+                            success = convertSwitchEnd(input_fd, output_fd, outputType);
                         } else {
                             /* Same to same, just read in bytes and print */
                             success = convertSame(input_fd, output_fd, outputType);
@@ -142,16 +142,18 @@ int main(int argc, char *argv[]) {
                     }
                     /* TODO Process conversion for 16BE and 16LE */
 conversion_done:
+                    close(input_fd);
+                    close(output_fd);
                     if(success) {
                         /* We got here so it must of worked right? */
                         return_code = EXIT_SUCCESS;
                     } else {
                         /* Conversion failed; clean up */
                         if(output_fd < 0 && input_fd >= 0) {
-                            close(input_fd);
+                            /* close(input_fd); */
                         }
                         if(output_fd >= 0) {
-                            close(output_fd);
+                            /* close(output_fd); */
                             unlink(output_path);
                         }
                         /* Just being pedantic... */
@@ -270,8 +272,16 @@ bool convert(const int input_fd, const int output_fd, const int outType) {
             }
         }
     } else if (outType == UTF8_VALUE) {
-        int bom = 0xbfbbef;
-        if(!safe_write(output_fd, &bom, 3)){
+        int bom = 0xef;
+        if(!safe_write(output_fd, &bom, 1)){
+            goto conversion_done;
+        }
+        bom = 0xbb;
+        if(!safe_write(output_fd, &bom, 1)){
+            goto conversion_done;
+        }
+        bom = 0xbf;
+        if(!safe_write(output_fd, &bom, 1)){
             goto conversion_done;
         }
     }
@@ -469,6 +479,62 @@ bool convert(const int input_fd, const int output_fd, const int outType) {
     /* If we got here the operation was a success! */
     success = true;
 conversion_done:
+    return success;
+}
+
+bool convertSwitchEnd(const int input_fd, const int output_fd, const int outType) {
+    bool success = false;
+    auto ssize_t bytes_read;
+    auto unsigned char read_value;
+    unsigned char bytes[2];
+    int bytesInArray = 0;
+    if(outType == UTF16LE_VALUE) {
+        if(input_fd >= 0 && output_fd >= 0) {
+            int w1 = 0xff;
+            int w2 = 0xfe;
+            /* write the surrogate pair to file */
+            if(!safe_write(output_fd, &w1, 1)) {
+                goto conversion_end_done;
+            }
+            if(!safe_write(output_fd, &w2, 1)) {
+                goto conversion_end_done;
+            }
+        }
+    } else if (outType == UTF16BE_VALUE) {
+        if(input_fd >= 0 && output_fd >= 0) {
+            int w2 = 0xff;
+            int w1 = 0xfe;
+            /* write the surrogate pair to file */
+            if(!safe_write(output_fd, &w1, 1)) {
+                goto conversion_end_done;
+            }
+            if(!safe_write(output_fd, &w2, 1)) {
+                goto conversion_end_done;
+            }
+        }
+    }
+    /* Read in by bytes of 2, then switch them. */
+    while((bytes_read = read(input_fd, &read_value, 1)) == 1) {
+        /* No bytes read in yet */
+        if(bytesInArray == 0){
+            bytes[0] = read_value;
+            bytesInArray++;
+        } else {
+            /* 1 byte read in, reading in second byte now */
+            bytes[1] = read_value;
+            int w1 = bytes[0];
+            int w2 = bytes[1];
+            if(!safe_write(output_fd, &w2, 1)) {
+                goto conversion_end_done;
+            }
+            if(!safe_write(output_fd, &w1, 1)) {
+                goto conversion_end_done;
+            }
+            bytesInArray = 0;
+        }
+    }
+    success = true;
+conversion_end_done:
     return success;
 }
 

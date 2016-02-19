@@ -57,6 +57,14 @@
     bool convert(const int input_fd, const int output_fd, const int outputType);
 
     /**
+     * Converts from BE to LE or vice versa.
+     * @param input_fd The input files file descriptor.
+     * @param output_fd The output files file descriptor.
+     * @return Returns true if the conversion was a success else false.
+     */
+    bool convertSwitchEnd(const int input_fd, const int output_fd, const int outputType);
+
+    /**
      * Converts from one file type to the same file type.
      * @param input_fd The input files file descriptor.
      * @param output_fd The output files file descriptor.
