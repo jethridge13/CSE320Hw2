@@ -3,7 +3,9 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <string.h>
+#include <sys/types.h>
 #include <sys/stat.h>
+#include <time.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdint.h>
@@ -53,6 +55,14 @@
      * @return Returns true if the conversion was a success else false.
      */
     bool convert(const int input_fd, const int output_fd, const int outputType);
+
+    /**
+     * Converts from one file type to the same file type.
+     * @param input_fd The input files file descriptor.
+     * @param output_fd The output files file descriptor.
+     * @return Returns true if the conversion was a success else false.
+     */    
+    bool convertSame(const int input_fd, const int output_fd, const int outputType);
 
     /**
      * Writes bytes to output_fd and reports the success of the operation.

@@ -1,5 +1,11 @@
 #include "utfconverter.h"
 
+#ifdef CSE320
+    #define debug(msg) printf("CSE320: %s", msg)
+#else
+    #define debug(msg)
+#endif
+
 int main(int argc, char *argv[]) {
     int opt, return_code = EXIT_FAILURE;
     char *input_path = NULL;
@@ -8,6 +14,7 @@ int main(int argc, char *argv[]) {
     FILE* standardout = fopen("stdout", "w");
     /* Output type */
     char* eValue = NULL;
+    int eFound = 0;
     int outputType = 0;
     /* Parse short options */
     while((opt = getopt(argc, argv, "he:")) != -1) {
@@ -19,6 +26,7 @@ int main(int argc, char *argv[]) {
                 break;
             case 'e':
                 eValue = optarg;
+                eFound = 1;
                 break;
             case '?':
                 /* Let this case fall down to default;
@@ -30,6 +38,11 @@ int main(int argc, char *argv[]) {
                 exit(EXIT_FAILURE);
                 break;
         }
+    }
+    if(!eFound){
+        fprintf(stderr, "The -e argument must be supplied with a valid file type.");
+        USAGE(argv[0]);
+        exit(EXIT_FAILURE);
     }
     if(strcmp(eValue, UTF8_STRING) == 0){
         outputType = UTF8_VALUE;
@@ -61,6 +74,16 @@ int main(int argc, char *argv[]) {
     if(input_path != NULL || output_path != NULL) {
         int input_fd = -1, output_fd = -1;
         bool success = false;
+        /* Delete the output file if it exists; Don't care about return code. */
+        unlink(output_path);
+        /* Attempt to create the file */
+        if((output_fd = open(output_path, O_CREAT | O_WRONLY,
+            S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP)) < 0) {
+            /* Tell the user that the file failed to be created */
+            fprintf(standardout, "Failed to open the file %s\n", input_path);
+            perror(NULL);
+            goto conversion_done;
+        }
         switch(validate_args(input_path, output_path)) {
                 case VALID_ARGS:
                     /* Attempt to open the input file */
@@ -69,18 +92,55 @@ int main(int argc, char *argv[]) {
                         perror(NULL);
                         goto conversion_done;
                     }
-                    /* Delete the output file if it exists; Don't care about return code. */
-                    unlink(output_path);
-                    /* Attempt to create the file */
-                    if((output_fd = open(output_path, O_CREAT | O_WRONLY,
-                        S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP)) < 0) {
-                        /* Tell the user that the file failed to be created */
-                        fprintf(standardout, "Failed to open the file %s\n", input_path);
-                        perror(NULL);
+                    auto ssize_t bytes_read;
+                    auto unsigned char read_value;
+                    unsigned char bom[3];
+                    int inputType = 0;
+                    int i = 0;
+                    for(; i < 3; i++){
+                        if((bytes_read = read(input_fd, &read_value, 1)) != 1){
+                            fprintf(stderr, "Error reading in from file while processing BOM.\n");
+                            return_code = EXIT_FAILURE;
+                            goto conversion_done;
+                        } else {
+                            bom[i] = read_value;
+                            if(i == 1){
+                                /* UTF-16LE */
+                                if(bom[0] == 0xff && bom[1] == 0xfe){
+                                    inputType = UTF16LE_VALUE;
+                                    i++;
+                                } /* UTF-16BE */ 
+                                else if(bom[0] == 0xfe && bom[1] == 0xff){
+                                    inputType = UTF16BE_VALUE;
+                                    i++;
+                                }
+                            }
+                        }
+                    }
+                    if(bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF){
+                        inputType = UTF8_VALUE;
+                    }
+                    /* No valid BOM found */
+                    if(!inputType){
+                        fprintf(stderr, "No valid BOM found for input file %s\n", input_path);
                         goto conversion_done;
                     }
                     /* Start the conversion */
-                    success = convert(input_fd, output_fd, outputType);
+                    if(inputType == UTF8_VALUE){
+                        success = convert(input_fd, output_fd, outputType);
+                    } else if(inputType == UTF16LE_VALUE || inputType == UTF16BE_VALUE){
+                        /* Convert from UTF16-LE or UTF16-BE to UTF-8 */
+                        if(outputType == UTF8_VALUE) {
+
+                        } else if (outputType != inputType){
+                            /* Switching from BE to LE or LE to BE, just switch the bits around */
+
+                        } else {
+                            /* Same to same, just read in bytes and print */
+                            success = convertSame(input_fd, output_fd, outputType);
+                        }
+                    }
+                    /* TODO Process conversion for 16BE and 16LE */
 conversion_done:
                     if(success) {
                         /* We got here so it must of worked right? */
@@ -119,6 +179,11 @@ conversion_done:
         /* Print out the program usage */
         USAGE(argv[0]);
     }
+    if(return_code == EXIT_SUCCESS){
+        fprintf(stderr, "The file %s was successfully created.\n", output_path);
+    } else {
+        fprintf(stderr, "The file %s was not created.\n", output_path);
+    }
     return return_code;
 }
 
@@ -153,6 +218,22 @@ int validate_args(const char *input_path, const char *output_path) {
                 return_code = VALID_ARGS;
             }
         }
+        struct stat ip;
+        struct stat op;
+        if(stat(input_path, &ip) == -1){
+            /*fprintf(stderr, "Error accessing the input file.\n"); */
+            return_code = FILE_DNE;
+        }
+        if(stat(output_path, &op) == -1){
+            /*fprintf(stderr, "Error accessing the output file.\n"); */
+            return_code = 0;
+        }
+        if(ip.st_dev != op.st_dev){
+            return_code = 0;
+        }
+        if(ip.st_ino == op.st_ino){
+            return_code = SAME_FILE;
+        }
     }
     /* Be good and free memory */
 
@@ -161,6 +242,7 @@ int validate_args(const char *input_path, const char *output_path) {
     return return_code;
 }
 
+/* Converts from UTF-8 to output type */
 bool convert(const int input_fd, const int output_fd, const int outType) {
     bool success = false;
     if(outType == UTF16LE_VALUE) {
@@ -387,6 +469,47 @@ bool convert(const int input_fd, const int output_fd, const int outType) {
     /* If we got here the operation was a success! */
     success = true;
 conversion_done:
+    return success;
+}
+
+bool convertSame(const int input_fd, const int output_fd, const int outType) {
+    bool success = false;
+    auto ssize_t bytes_read;
+    auto unsigned char read_value;
+    if(outType == UTF16LE_VALUE) {
+        if(input_fd >= 0 && output_fd >= 0) {
+            int w1 = 0xff;
+            int w2 = 0xfe;
+            /* write the surrogate pair to file */
+            if(!safe_write(output_fd, &w1, 1)) {
+                goto conversion_same_done;
+            }
+            if(!safe_write(output_fd, &w2, 1)) {
+                goto conversion_same_done;
+            }
+        }
+    } else if (outType == UTF16BE_VALUE) {
+        if(input_fd >= 0 && output_fd >= 0) {
+            int w2 = 0xff;
+            int w1 = 0xfe;
+            /* write the surrogate pair to file */
+            if(!safe_write(output_fd, &w1, 1)) {
+                goto conversion_same_done;
+            }
+            if(!safe_write(output_fd, &w2, 1)) {
+                goto conversion_same_done;
+            }
+        }
+    }
+
+    while((bytes_read = read(input_fd, &read_value, 1)) == 1) {
+        if(!safe_write(output_fd, &read_value, 1)) {
+            goto conversion_same_done;
+        }
+    }
+    success = true;
+
+conversion_same_done:
     return success;
 }
 
