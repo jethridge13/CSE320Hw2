@@ -274,6 +274,7 @@ bool convert(const int input_fd, const int output_fd, int outType) {
     char hostName[128];
     gethostname(hostName, 127);
     char *sparky = "sparky";
+    bool s;
     if(outType == UTF16LE_VALUE) {
         if(input_fd >= 0 && output_fd >= 0) {
             int w1 = 0xff;
@@ -314,6 +315,7 @@ bool convert(const int input_fd, const int output_fd, int outType) {
     }
     /* If sparky, change endianess */
     if(strcmp(hostName, sparky) == 0){
+        s = true;
         if(outType == UTF16BE_VALUE) {
             outType = UTF16LE_VALUE;
         } else if(outType == UTF16LE_VALUE) {
@@ -634,16 +636,22 @@ bool convertToUTF8(const int input_fd, const int output_fd, const int outType, c
     } else {
         goto conversion_convert_done;
     }
-    while((bytes_read = read(input_fd, &read_value, 1)) == 1) {
-        /* ASCII bytes are the same */
-        if(read_value < 128 && read_value != 0){
-            if(!safe_write(output_fd, &read_value, 1)) {
-                goto conversion_convert_done;
-            }
-        } else {
+    if(inType == UTF16BE_VALUE){
+        while((bytes_read = read(input_fd, &read_value, 1)) == 1) {
+            /* ASCII bytes are the same */
+            if(read_value == 0){
+                /* Do nothing, it's 0. */
+                /* 0s in UTF16 are not EOF but something else not important */
+            }else if(read_value < 128) {
+                if(!safe_write(output_fd, &read_value, 1)) {
+                    goto conversion_convert_done;
+                }
+            } else {
 
-        } 
+            } 
+        }
     }
+    
     success = true;
 conversion_convert_done:
     return success;
