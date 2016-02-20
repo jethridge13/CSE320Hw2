@@ -274,7 +274,7 @@ bool convert(const int input_fd, const int output_fd, int outType) {
     char hostName[128];
     gethostname(hostName, 127);
     char *sparky = "sparky";
-    bool s;
+    bool s = false;
     if(outType == UTF16LE_VALUE) {
         if(input_fd >= 0 && output_fd >= 0) {
             int w1 = 0xff;
@@ -321,6 +321,9 @@ bool convert(const int input_fd, const int output_fd, int outType) {
         } else if(outType == UTF16LE_VALUE) {
             outType = UTF16BE_VALUE;
         }
+    }
+    if(s){
+
     }
     /* UTF-8 encoded text can be @ most 4-bytes */
     unsigned char bytes['4'-'0'];
@@ -620,6 +623,8 @@ bool convertToUTF8(const int input_fd, const int output_fd, const int outType, c
     bool success = false;
     auto ssize_t bytes_read;
     auto unsigned char read_value;
+    unsigned char bytes[2];
+    int bytesInArray = 0;
     if (outType == UTF8_VALUE) {
         int bom = 0xef;
         if(!safe_write(output_fd, &bom, 1)){
@@ -636,19 +641,27 @@ bool convertToUTF8(const int input_fd, const int output_fd, const int outType, c
     } else {
         goto conversion_convert_done;
     }
-    if(inType == UTF16BE_VALUE){
-        while((bytes_read = read(input_fd, &read_value, 1)) == 1) {
-            /* ASCII bytes are the same */
-            if(read_value == 0){
-                /* Do nothing, it's 0. */
-                /* 0s in UTF16 are not EOF but something else not important */
-            }else if(read_value < 128) {
-                if(!safe_write(output_fd, &read_value, 1)) {
-                    goto conversion_convert_done;
-                }
-            } else {
 
-            } 
+    if(inType == UTF16LE_VALUE){
+        while((bytes_read = read(input_fd, &read_value, 1)) == 1) {
+            if(bytesInArray == 0){
+                bytes[0] = read_value;
+                bytesInArray++;
+            } else {
+                /* 1 byte read in, reading in second byte now */
+                bytes[1] = read_value;
+                int w1 = bytes[0];
+                int w2 = bytes[1];
+                bytesInArray = 0;
+                /* ASCII */
+                if(w2 == 0){
+                    if(!safe_write(output_fd, &w1, 1)){
+                        goto conversion_convert_done;
+                    }
+                } else {
+
+                }
+            }
         }
     }
     
