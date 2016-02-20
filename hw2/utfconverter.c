@@ -1,9 +1,17 @@
 #include "utfconverter.h"
 
 #ifdef CSE320
-    #define debug(msg) printf("CSE320: %s", msg)
+    #define debug1(msg) fprintf(stderr, "CSE320: Hostname: %s\n", msg)
+    #define debug2(path, dev, ino, size) fprintf(stderr, "CSE320: Input: %s, %lu, %lu, %lu byte(s)\n", path, dev, ino, size)
+    #define debug3(msg) fprintf(stderr, "CSE320: Output: %s\n", msg)
+    #define debug4(msg) fprintf(stderr, "CSE320: Input encoding: %s\n", msg)
+    #define debug5(msg) fprintf(stderr, "CSE320: Output encoding: %s\n", msg)
 #else
-    #define debug(msg)
+    #define debug1(msg)
+    #define debug2(path, dev, ino, size)
+    #define debug3(msg)
+    #define debug4(msg)
+    #define debug5(msg)
 #endif
 
 int main(int argc, char *argv[]) {
@@ -16,8 +24,9 @@ int main(int argc, char *argv[]) {
     char* eValue = NULL;
     int eFound = 0;
     int outputType = 0;
+    int vCount = 0;
     /* Parse short options */
-    while((opt = getopt(argc, argv, "he:")) != -1) {
+    while((opt = getopt(argc, argv, "he:v")) != -1) {
         switch(opt) {
             case 'h':
                 /* The help menu was selected */
@@ -27,6 +36,9 @@ int main(int argc, char *argv[]) {
             case 'e':
                 eValue = optarg;
                 eFound = 1;
+                break;
+            case 'v':
+                vCount++;
                 break;
             case '?':
                 /* Let this case fall down to default;
@@ -39,10 +51,14 @@ int main(int argc, char *argv[]) {
                 break;
         }
     }
+    /* Changing around some behavioral variables */
     if(!eFound){
         fprintf(stderr, "The -e argument must be supplied with a valid file type.");
         USAGE(argv[0]);
         exit(EXIT_FAILURE);
+    }
+    if(vCount > 3){
+        vCount = 3;
     }
     if(strcmp(eValue, UTF8_STRING) == 0){
         outputType = UTF8_VALUE;
@@ -74,20 +90,20 @@ int main(int argc, char *argv[]) {
     if(input_path != NULL || output_path != NULL) {
         int input_fd = -1, output_fd = -1;
         bool success = false;
-        /* Delete the output file if it exists; Don't care about return code. */
-        unlink(output_path);
-        /* Attempt to create the file */
-        if((output_fd = open(output_path, O_CREAT | O_WRONLY,
-            S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP)) < 0) {
-            /* Tell the user that the file failed to be created */
-            fprintf(standardout, "Failed to open the file %s\n", input_path);
-            perror(NULL);
-            goto conversion_done;
-        }
         switch(validate_args(input_path, output_path)) {
                 case VALID_ARGS:
                     /* Attempt to open the input file */
                     if((input_fd = open(input_path, O_RDONLY)) < 0) {
+                        fprintf(standardout, "Failed to open the file %s\n", input_path);
+                        perror(NULL);
+                        goto conversion_done;
+                    }
+                    /* Delete the output file if it exists; Don't care about return code. */
+                    unlink(output_path);
+                    /* Attempt to create the file */
+                    if((output_fd = open(output_path, O_CREAT | O_WRONLY,
+                    S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP)) < 0) {
+                        /* Tell the user that the file failed to be created */
                         fprintf(standardout, "Failed to open the file %s\n", input_path);
                         perror(NULL);
                         goto conversion_done;
@@ -125,22 +141,55 @@ int main(int argc, char *argv[]) {
                         fprintf(stderr, "No valid BOM found for input file %s\n", input_path);
                         goto conversion_done;
                     }
+
+                    /* Debug stuff */
+                    struct stat ip;
+                    if(stat(input_path, &ip) == -1){
+                        goto conversion_done;
+                    }
+                    char hostName[128];
+                    gethostname(hostName, 127);
+                    debug1(hostName);
+                    debug2(input_path, ip.st_dev, ip.st_ino, ip.st_size);
+                    debug3(output_path);
+                    switch(inputType){
+                        case UTF8_VALUE:
+                            debug4(UTF8_STRING);
+                            break;
+                        case UTF16LE_VALUE:
+                            debug4(UTF16LE_STRING);
+                            break;
+                        case UTF16BE_VALUE:
+                            debug5(UTF16BE_STRING);
+                            break;
+                    }
+                    switch(outputType){
+                        case UTF8_VALUE:
+                            debug5(UTF8_STRING);
+                            break;
+                        case UTF16LE_VALUE:
+                            debug5(UTF16LE_STRING);
+                            break;
+                        case UTF16BE_VALUE:
+                            debug5(UTF16BE_STRING);
+                            break;
+                    }
+
                     /* Start the conversion */
                     if(inputType == UTF8_VALUE){
                         success = convert(input_fd, output_fd, outputType);
                     } else if(inputType == UTF16LE_VALUE || inputType == UTF16BE_VALUE){
                         /* Convert from UTF16-LE or UTF16-BE to UTF-8 */
                         if(outputType == UTF8_VALUE) {
-
+                            success = convertToUTF8(input_fd, output_fd, outputType, inputType);
                         } else if (outputType != inputType){
-                            /* Switching from BE to LE or LE to BE, just switch the bits around */
+                            /* Switching from BE to LE or LE to BE, just switch the bytes around */
                             success = convertSwitchEnd(input_fd, output_fd, outputType);
                         } else {
                             /* Same to same, just read in bytes and print */
                             success = convertSame(input_fd, output_fd, outputType);
                         }
                     }
-                    /* TODO Process conversion for 16BE and 16LE */
 conversion_done:
                     close(input_fd);
                     close(output_fd);
@@ -191,62 +240,40 @@ conversion_done:
 
 int validate_args(const char *input_path, const char *output_path) {
     int return_code = FAILED;
-    /* number of arguments */
-    int vargs = 2;
-    /* create reference */
-    void* pvargs = &vargs;
     /* Make sure both strings are not NULL */
     if(input_path != NULL && output_path != NULL) {
-        /* Check to see if the the input and output are two different files. */
-        if(strcmp(input_path, output_path) != 0) {
-            /* Check to see if the input file exists */
-            struct stat sb;
-            /* zero out the memory of one sb plus another */
-            memset(&sb, 0, sizeof(sb) + 1);
-            /* increment to second argument */
-            pvargs++;
-            /* now check to see if the file exists */
-            if(stat(input_path, &sb) == -1) {
-                /* something went wrong */
-                if(errno == ENOENT) {
-                    /* File does not exist. */
-                    return_code = FILE_DNE;
-                } else {
-                    /* No idea what the error is. */
-                    perror("NULL");
-                }
-
-            } else {
-                return_code = VALID_ARGS;
-            }
-        }
         struct stat ip;
         struct stat op;
         if(stat(input_path, &ip) == -1){
-            /*fprintf(stderr, "Error accessing the input file.\n"); */
             return_code = FILE_DNE;
+            goto end_of_validate;
         }
-        if(stat(output_path, &op) == -1){
-            /*fprintf(stderr, "Error accessing the output file.\n"); */
-            return_code = 0;
+        else if(stat(output_path, &op) == -1){
+            int err = errno;
+            /* File does not exist. Cannot be same file. File will be created later. */
+            if(err == 2){
+                return_code = VALID_ARGS;
+                goto end_of_validate;
+            }
         }
-        if(ip.st_dev != op.st_dev){
-            return_code = 0;
-        }
-        if(ip.st_ino == op.st_ino){
-            return_code = SAME_FILE;
+        else if(ip.st_dev == op.st_dev){
+            if(ip.st_ino == op.st_ino){
+                return_code = SAME_FILE;
+                goto end_of_validate;
+            }
         }
     }
-    /* Be good and free memory */
-
-    /* free(pvargs); */
-
+    return_code = VALID_ARGS;
+end_of_validate:
     return return_code;
 }
 
 /* Converts from UTF-8 to output type */
-bool convert(const int input_fd, const int output_fd, const int outType) {
+bool convert(const int input_fd, const int output_fd, int outType) {
     bool success = false;
+    char hostName[128];
+    gethostname(hostName, 127);
+    char *sparky = "sparky";
     if(outType == UTF16LE_VALUE) {
         if(input_fd >= 0 && output_fd >= 0) {
             int w1 = 0xff;
@@ -283,6 +310,14 @@ bool convert(const int input_fd, const int output_fd, const int outType) {
         bom = 0xbf;
         if(!safe_write(output_fd, &bom, 1)){
             goto conversion_done;
+        }
+    }
+    /* If sparky, change endianess */
+    if(strcmp(hostName, sparky) == 0){
+        if(outType == UTF16BE_VALUE) {
+            outType = UTF16LE_VALUE;
+        } else if(outType == UTF16LE_VALUE) {
+            outType = UTF16BE_VALUE;
         }
     }
     /* UTF-8 encoded text can be @ most 4-bytes */
@@ -464,7 +499,7 @@ bool convert(const int input_fd, const int output_fd, const int outType) {
                         goto conversion_done;
                     } 
                 }
-                /* Done encoding the value to UTF-16LE */
+                /* Done encoding the value to UTF-16BE */
                 encode = false;
                 count = 0;
         }
@@ -576,6 +611,41 @@ bool convertSame(const int input_fd, const int output_fd, const int outType) {
     success = true;
 
 conversion_same_done:
+    return success;
+}
+
+bool convertToUTF8(const int input_fd, const int output_fd, const int outType, const int inType) {
+    bool success = false;
+    auto ssize_t bytes_read;
+    auto unsigned char read_value;
+    if (outType == UTF8_VALUE) {
+        int bom = 0xef;
+        if(!safe_write(output_fd, &bom, 1)){
+            goto conversion_convert_done;
+        }
+        bom = 0xbb;
+        if(!safe_write(output_fd, &bom, 1)){
+            goto conversion_convert_done;
+        }
+        bom = 0xbf;
+        if(!safe_write(output_fd, &bom, 1)){
+            goto conversion_convert_done;
+        }
+    } else {
+        goto conversion_convert_done;
+    }
+    while((bytes_read = read(input_fd, &read_value, 1)) == 1) {
+        /* ASCII bytes are the same */
+        if(read_value < 128 && read_value != 0){
+            if(!safe_write(output_fd, &read_value, 1)) {
+                goto conversion_convert_done;
+            }
+        } else {
+
+        } 
+    }
+    success = true;
+conversion_convert_done:
     return success;
 }
 

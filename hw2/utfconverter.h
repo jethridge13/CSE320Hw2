@@ -54,7 +54,7 @@
      * @param output_fd The output files file descriptor.
      * @return Returns true if the conversion was a success else false.
      */
-    bool convert(const int input_fd, const int output_fd, const int outputType);
+    bool convert(const int input_fd, const int output_fd, int outputType);
 
     /**
      * Converts from BE to LE or vice versa.
@@ -71,6 +71,8 @@
      * @return Returns true if the conversion was a success else false.
      */    
     bool convertSame(const int input_fd, const int output_fd, const int outputType);
+
+    bool convertToUTF8(const int input_fd, const int output_fd, const int outputType, const int inputType);
 
     /**
      * Writes bytes to output_fd and reports the success of the operation.
