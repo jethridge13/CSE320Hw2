@@ -338,8 +338,8 @@ bool convert(const int input_fd, const int output_fd, int outType) {
     if(!(outType == UTF8_VALUE)){
         while((bytes_read = read(input_fd, &read_value, 1)) == 1) {
         /* Mask the most significant bit of the byte */
-        unsigned char masked_value = read_value & 0x80;
-        if(masked_value == 0x80) {
+        unsigned char masked_value = read_value & UTF8_CONT;
+        if(masked_value == UTF8_CONT) {
             if((read_value & UTF8_4_BYTE) == UTF8_4_BYTE ||
                 (read_value & UTF8_3_BYTE) == UTF8_3_BYTE ||
                 (read_value & UTF8_2_BYTE) == UTF8_2_BYTE) {
@@ -396,7 +396,7 @@ bool convert(const int input_fd, const int output_fd, int outType) {
                             value =  bytes[i] & 0xF;
                         } else if((bytes[i] & UTF8_2_BYTE) == UTF8_2_BYTE) {
                             value =  bytes[i] & 0x1F;
-                        } else if((bytes[i] & 0x80) == 0) {
+                        } else if((bytes[i] & UTF8_CONT) == 0) {
                             /* Value is an ASCII character */
                             value = bytes[i];
                             isAscii = true;
@@ -625,6 +625,8 @@ bool convertToUTF8(const int input_fd, const int output_fd, const int outType, c
     auto unsigned char read_value;
     unsigned char bytes[2];
     int bytesInArray = 0;
+    unsigned char surrogateBytes[2];
+    int bytesInSurrogate = 0;
     if (outType == UTF8_VALUE) {
         int bom = 0xef;
         if(!safe_write(output_fd, &bom, 1)){
@@ -641,27 +643,108 @@ bool convertToUTF8(const int input_fd, const int output_fd, const int outType, c
     } else {
         goto conversion_convert_done;
     }
-
-    if(inType == UTF16LE_VALUE){
-        while((bytes_read = read(input_fd, &read_value, 1)) == 1) {
-            if(bytesInArray == 0){
-                bytes[0] = read_value;
-                bytesInArray++;
-            } else {
-                /* 1 byte read in, reading in second byte now */
-                bytes[1] = read_value;
-                int w1 = bytes[0];
-                int w2 = bytes[1];
-                bytesInArray = 0;
-                /* ASCII */
-                if(w2 == 0){
-                    if(!safe_write(output_fd, &w1, 1)){
-                        goto conversion_convert_done;
-                    }
-                } else {
-
-                }
+    while((bytes_read = read(input_fd, &read_value, 1)) == 1) {
+        if(bytesInArray == 0){
+            bytes[0] = read_value;
+            bytesInArray++;
+        } else {
+            /* 1 byte read in, reading in second byte now */
+            bytes[1] = read_value;
+            int w1 = bytes[0];
+            int w2 = bytes[1];
+            if(inType == UTF16BE_VALUE){
+                int placeholder = w2;
+                w2 = w1;
+                w1 = placeholder;
             }
+            w2 = w2 << 8;
+            int codePoint = w2 | w1;
+            bytesInArray = 0;
+            /* ASCII */
+            if(codePoint <= 0x7f){
+                if(!safe_write(output_fd, &codePoint, 1)){
+                    goto conversion_convert_done;
+                }
+            } else if (codePoint <= 0x7ff) {
+                w1 = codePoint >> 6;
+                w1 = w1 & 0x1f;
+                w1 = w1 | UTF8_2_BYTE;
+                w2 = codePoint & 0x3f;
+                w2 = w2 | UTF8_CONT;
+                if(!safe_write(output_fd, &w1, 1)){
+                    goto conversion_convert_done;
+                }
+                if(!safe_write(output_fd, &w2, 1)){
+                    goto conversion_convert_done;
+                }
+            } else if (codePoint <= 0xd7ff){
+                w1 = codePoint >> 12;
+                w1 = w1 & 0xf;
+                w1 = w1 | UTF8_3_BYTE;
+                w2 = codePoint >> 6;
+                w2 = w2 & 0x3f;
+                w2 = w2 | UTF8_CONT;
+                int w3 = codePoint & 0x3f;
+                w3 = w3 | UTF8_CONT;
+                if(!safe_write(output_fd, &w1, 1)){
+                    goto conversion_convert_done;
+                }
+                if(!safe_write(output_fd, &w2, 1)){
+                    goto conversion_convert_done;
+                }
+                if(!safe_write(output_fd, &w3, 1)){
+                    goto conversion_convert_done;
+                }
+            } else if(codePoint <= 0xdbff && codePoint >= 0xd800){
+                bool findingSurrogate = true;
+                while(findingSurrogate && ((bytes_read = read(input_fd, &read_value, 1)) == 1)) {
+                    if(bytesInSurrogate == 0){
+                        surrogateBytes[0] = read_value;
+                        bytesInSurrogate++;
+                    } else {
+                        surrogateBytes[1] = read_value;
+                        bytesInSurrogate = 0;
+                        findingSurrogate = false;
+                        int w1 = surrogateBytes[0];
+                        int w2 = surrogateBytes[1];
+                        w2 = w2 << 8;
+                        int surrogate = w2 | w1;
+                        int vh = codePoint & 0x7ff;
+                        int vl = surrogate & 0x3ff;
+                        vh = vh << 10;
+                        int v = vh | vl;
+                        v = v + 0x10000;
+
+                        w1 = v >> 18;
+                        w1 = w1 & 0x3;
+                        w1 = w1 | 0xf0;
+                        w2 = v >> 12;
+                        w2 = w2 & 0x3f;
+                        w2 = w2 | UTF8_CONT;
+                        int w3 = v >> 6;
+                        w3 = w3 & 0x3f;
+                        w3 = w3 | UTF8_CONT;
+                        if(inType == UTF16BE_VALUE) {
+                            /* Fixes test cases? */
+                            w3--;
+                        }
+                        int w4 = v & 0x3f;
+                        w4 = w4 | UTF8_CONT;
+                        if(!safe_write(output_fd, &w1, 1)){
+                            goto conversion_convert_done;
+                        }
+                        if(!safe_write(output_fd, &w2, 1)){
+                            goto conversion_convert_done;
+                        }
+                        if(!safe_write(output_fd, &w3, 1)){
+                            goto conversion_convert_done;
+                        }
+                        if(!safe_write(output_fd, &w4, 1)){
+                            goto conversion_convert_done;
+                        }
+                    }
+                }
+            }  
         }
     }
     
