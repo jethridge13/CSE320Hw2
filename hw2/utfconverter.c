@@ -268,6 +268,25 @@ end_of_validate:
     return return_code;
 }
 
+/* This function takes the bits of a given int and moves them around
+ * so the endianess will make sense for different machines. It breaks
+ * the 32 bit entity up into it's 4 8-bit segments and then rearranges 
+ * them. Might not work on 64 bit machines? But shouldn't matter because
+ * is only going to be used on 32-bit Sparky.
+ */
+int changeEndian(int r){
+    int u1;
+    int u2;
+    int u3;
+    int u4;
+    u1 = (r & 0xff) << 24;
+    u2 = (r & 0xff00) << 16;
+    u3 = (r & 0xff0000) << 8;
+    u4 = (r & 0xff000000);
+    r = u1 | u2 | u3 | u4;
+    return r;
+}
+
 /* Converts from UTF-8 to output type */
 bool convert(const int input_fd, const int output_fd, int outType) {
     bool success = false;
@@ -275,11 +294,17 @@ bool convert(const int input_fd, const int output_fd, int outType) {
     gethostname(hostName, 127);
     char *sparky = "sparky";
     bool s = false;
+    if (strcmp(hostName, sparky) == 0) {
+        s = true;
+    }
     if(outType == UTF16LE_VALUE) {
         if(input_fd >= 0 && output_fd >= 0) {
             int w1 = 0xff;
             int w2 = 0xfe;
-            /* write the surrogate pair to file */
+            if(s){
+                w1 = changeEndian(w1);
+                w2 = changeEndian(w2);
+            }
             if(!safe_write(output_fd, &w1, 1)) {
                 goto conversion_done;
             }
@@ -291,7 +316,10 @@ bool convert(const int input_fd, const int output_fd, int outType) {
         if(input_fd >= 0 && output_fd >= 0) {
             int w2 = 0xff;
             int w1 = 0xfe;
-            /* write the surrogate pair to file */
+            if(s){
+                w1 = changeEndian(w1);
+                w2 = changeEndian(w2);
+            }
             if(!safe_write(output_fd, &w1, 1)) {
                 goto conversion_done;
             }
@@ -301,29 +329,26 @@ bool convert(const int input_fd, const int output_fd, int outType) {
         }
     } else if (outType == UTF8_VALUE) {
         int bom = 0xef;
+        if(s){
+                bom = changeEndian(bom);
+        }
         if(!safe_write(output_fd, &bom, 1)){
             goto conversion_done;
         }
         bom = 0xbb;
+        if(s){
+                bom = changeEndian(bom);
+        }
         if(!safe_write(output_fd, &bom, 1)){
             goto conversion_done;
         }
         bom = 0xbf;
+        if(s){
+                bom = changeEndian(bom);
+        }
         if(!safe_write(output_fd, &bom, 1)){
             goto conversion_done;
         }
-    }
-    /* If sparky, change endianess */
-    if(strcmp(hostName, sparky) == 0){
-        s = true;
-        if(outType == UTF16BE_VALUE) {
-            outType = UTF16LE_VALUE;
-        } else if(outType == UTF16LE_VALUE) {
-            outType = UTF16BE_VALUE;
-        }
-    }
-    if(s){
-
     }
     /* UTF-8 encoded text can be @ most 4-bytes */
     unsigned char bytes['4'-'0'];
@@ -422,6 +447,10 @@ bool convert(const int input_fd, const int output_fd, int outType) {
                         int w1 = (vprime >> 10) + 0xD800;
                         int w2 = 0 /*(vprime & 0x3FF) + 0xDC00*/;
                         /* write the surrogate pair to file */
+                        if(s){
+                            w1 = changeEndian(w1);
+                            w2 = changeEndian(w2);
+                        }
                         if(!safe_write(output_fd, &w1, CODE_UNIT_SIZE)) {
                         	/* Assembly for some super efficient coding */
                             /* asm("movl	$8, %esi\n\t"
@@ -438,6 +467,9 @@ bool convert(const int input_fd, const int output_fd, int outType) {
                         }
                     } else {
                         /* write the code point to file */
+                        if(s){
+                            value = changeEndian(value);
+                        }
                         if(!safe_write(output_fd, &value, CODE_UNIT_SIZE)) {
                             /* Assembly for some super efficient coding */
                             /* asm("movl	$8, %esi\n"
@@ -465,6 +497,10 @@ bool convert(const int input_fd, const int output_fd, int outType) {
                         w2 = upper8 | lower8;
 
                         /* write the surrogate pair to file */
+                        if(s){
+                            w1 = changeEndian(w1);
+                            w2 = changeEndian(w2);
+                        }
                         if(!safe_write(output_fd, &w1, CODE_UNIT_SIZE)) {
                             /* Assembly for some super efficient coding */
                             /* asm("movl    $8, %esi\n\t"
@@ -490,6 +526,9 @@ bool convert(const int input_fd, const int output_fd, int outType) {
                             upper8 = upper8 >> 8;
                             lower8 = lower8 << 8;
                             value = upper8 | lower8;
+                        }
+                        if(s){
+                            value = changeEndian(value);
                         }
                         if(!safe_write(output_fd, &value, CODE_UNIT_SIZE)) {
                             /* Assembly for some super efficient coding */
@@ -528,11 +567,21 @@ bool convertSwitchEnd(const int input_fd, const int output_fd, const int outType
     auto unsigned char read_value;
     unsigned char bytes[2];
     int bytesInArray = 0;
+    char hostName[128];
+    gethostname(hostName, 127);
+    char *sparky = "sparky";
+    bool s = false;
+    if (strcmp(hostName, sparky) == 0) {
+        s = true;
+    }
     if(outType == UTF16LE_VALUE) {
         if(input_fd >= 0 && output_fd >= 0) {
             int w1 = 0xff;
             int w2 = 0xfe;
-            /* write the surrogate pair to file */
+            if(s){
+                w1 = changeEndian(w1);
+                w2 = changeEndian(w2);
+            }
             if(!safe_write(output_fd, &w1, 1)) {
                 goto conversion_end_done;
             }
@@ -544,7 +593,10 @@ bool convertSwitchEnd(const int input_fd, const int output_fd, const int outType
         if(input_fd >= 0 && output_fd >= 0) {
             int w2 = 0xff;
             int w1 = 0xfe;
-            /* write the surrogate pair to file */
+            if(s){
+                w1 = changeEndian(w1);
+                w2 = changeEndian(w2);
+            }
             if(!safe_write(output_fd, &w1, 1)) {
                 goto conversion_end_done;
             }
@@ -564,6 +616,10 @@ bool convertSwitchEnd(const int input_fd, const int output_fd, const int outType
             bytes[1] = read_value;
             int w1 = bytes[0];
             int w2 = bytes[1];
+            if(s){
+                w1 = changeEndian(w1);
+                w2 = changeEndian(w2);
+            }
             if(!safe_write(output_fd, &w2, 1)) {
                 goto conversion_end_done;
             }
@@ -582,11 +638,21 @@ bool convertSame(const int input_fd, const int output_fd, const int outType) {
     bool success = false;
     auto ssize_t bytes_read;
     auto unsigned char read_value;
+    char hostName[128];
+    gethostname(hostName, 127);
+    char *sparky = "sparky";
+    bool s = false;
+    if (strcmp(hostName, sparky) == 0) {
+        s = true;
+    }
     if(outType == UTF16LE_VALUE) {
         if(input_fd >= 0 && output_fd >= 0) {
             int w1 = 0xff;
             int w2 = 0xfe;
-            /* write the surrogate pair to file */
+            if(s){
+                w1 = changeEndian(w1);
+                w2 = changeEndian(w2);
+            }
             if(!safe_write(output_fd, &w1, 1)) {
                 goto conversion_same_done;
             }
@@ -598,7 +664,10 @@ bool convertSame(const int input_fd, const int output_fd, const int outType) {
         if(input_fd >= 0 && output_fd >= 0) {
             int w2 = 0xff;
             int w1 = 0xfe;
-            /* write the surrogate pair to file */
+            if(s){
+                w1 = changeEndian(w1);
+                w2 = changeEndian(w2);
+            }
             if(!safe_write(output_fd, &w1, 1)) {
                 goto conversion_same_done;
             }
@@ -627,16 +696,32 @@ bool convertToUTF8(const int input_fd, const int output_fd, const int outType, c
     int bytesInArray = 0;
     unsigned char surrogateBytes[2];
     int bytesInSurrogate = 0;
+    char hostName[128];
+    gethostname(hostName, 127);
+    char *sparky = "sparky";
+    bool s = false;
+    if (strcmp(hostName, sparky) == 0) {
+        s = true;
+    }
     if (outType == UTF8_VALUE) {
         int bom = 0xef;
+        if(s){
+                bom = changeEndian(bom);
+        }
         if(!safe_write(output_fd, &bom, 1)){
             goto conversion_convert_done;
         }
         bom = 0xbb;
+        if(s){
+                bom = changeEndian(bom);
+        }
         if(!safe_write(output_fd, &bom, 1)){
             goto conversion_convert_done;
         }
         bom = 0xbf;
+        if(s){
+                bom = changeEndian(bom);
+        }
         if(!safe_write(output_fd, &bom, 1)){
             goto conversion_convert_done;
         }
@@ -662,6 +747,9 @@ bool convertToUTF8(const int input_fd, const int output_fd, const int outType, c
             bytesInArray = 0;
             /* ASCII */
             if(codePoint <= 0x7f){
+                if(s){
+                    codePoint = changeEndian(codePoint);
+                }
                 if(!safe_write(output_fd, &codePoint, 1)){
                     goto conversion_convert_done;
                 }
@@ -671,6 +759,10 @@ bool convertToUTF8(const int input_fd, const int output_fd, const int outType, c
                 w1 = w1 | UTF8_2_BYTE;
                 w2 = codePoint & 0x3f;
                 w2 = w2 | UTF8_CONT;
+                if(s){
+                    w1 = changeEndian(w1);
+                    w2 = changeEndian(w2);
+                }
                 if(!safe_write(output_fd, &w1, 1)){
                     goto conversion_convert_done;
                 }
@@ -686,6 +778,11 @@ bool convertToUTF8(const int input_fd, const int output_fd, const int outType, c
                 w2 = w2 | UTF8_CONT;
                 int w3 = codePoint & 0x3f;
                 w3 = w3 | UTF8_CONT;
+                if(s){
+                    w1 = changeEndian(w1);
+                    w2 = changeEndian(w2);
+                    w3 = changeEndian(w3);
+                }
                 if(!safe_write(output_fd, &w1, 1)){
                     goto conversion_convert_done;
                 }
@@ -713,6 +810,7 @@ bool convertToUTF8(const int input_fd, const int output_fd, const int outType, c
                         int vl = surrogate & 0x3ff;
                         vh = vh << 10;
                         int v = vh | vl;
+                        /* V holds the surrogate pair codepoint */
                         v = v + 0x10000;
 
                         w1 = v >> 18;
@@ -730,6 +828,12 @@ bool convertToUTF8(const int input_fd, const int output_fd, const int outType, c
                         }
                         int w4 = v & 0x3f;
                         w4 = w4 | UTF8_CONT;
+                        if(s){
+                            w1 = changeEndian(w1);
+                            w2 = changeEndian(w2);
+                            w3 = changeEndian(w3);
+                            w4 = changeEndian(w4);
+                        }
                         if(!safe_write(output_fd, &w1, 1)){
                             goto conversion_convert_done;
                         }
