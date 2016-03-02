@@ -99,14 +99,15 @@ void* sf_malloc(size_t size) {
 
 			void* footerRealign = (void*) freelist_head;
 			footerRealign += 8;
-			void* returnable = footerRealign;
 			footerRealign += ((*freelist_head).header.block_size << 4) - 16;
 			sf_footer* freeFooter = (sf_footer*) footerRealign;
 			(*freeFooter).block_size = (*freelist_head).header.block_size;
 
 			//printf("%p\n", freeFooter);
 
-			return returnable;
+		} else {
+			/* Need additional space to store this request */
+			//printf("%d\n", payloadSize);
 		}
 		return pointer;
 	}
