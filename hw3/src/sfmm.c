@@ -187,8 +187,14 @@ void* sf_realloc(void *ptr, size_t size) {
     return NULL;
 }
 
-/* TODO */
 void* sf_calloc(size_t nmemb, size_t size) {
-	void* mem = sf_malloc(size);
+	void* mem = sf_malloc(size * nmemb);
+	int i = 0;
+	/* char pointers have size 1. This means we will only overwrite what we want */
+	char* index = mem;
+	for(; i < nmemb * size; i++){
+		*index = 0;
+		index += 1;
+	}
     return mem;
 }

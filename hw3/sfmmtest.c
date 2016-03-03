@@ -9,6 +9,7 @@
 #define MAX_HEAP_SIZE (20 * (1 << 20))
 #define VALUE1_VALUE 320
 #define VALUE2_VALUE 0xDEADBEEFF00D
+#define CALLOC_TEST_VALUE 0
 
 #define press_to_cont() do { \
     printf("Press Enter to Continue"); \
@@ -107,6 +108,17 @@ int main(int argc, char *argv[]) {
 
     // Test sf_calloc
     printf("=== Test8: Testing calloc ===\n");
+    int* callocTest = sf_calloc(1, 4);
+    payload_check(callocTest);
+    sf_varprint(callocTest);
+    press_to_cont();
+
+    // Test sf_calloc part 2
+    
+    printf("=== Test9: Testing calloc part 2 ===\n");
+    check_prim_contents(callocTest, CALLOC_TEST_VALUE, "%d", "callocTest");
+    press_to_cont();
+    
 
     return EXIT_SUCCESS;
 }
