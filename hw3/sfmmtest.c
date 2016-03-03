@@ -97,6 +97,7 @@ int main(int argc, char *argv[]) {
     info("Freeing value1...\n");
     sf_free(value1);
     sf_snapshot(true);
+    sf_varprint(value1);
     press_to_cont();
 
     // Allocate more memory

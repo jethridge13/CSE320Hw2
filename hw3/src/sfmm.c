@@ -130,7 +130,7 @@ void* sf_malloc(size_t size) {
 				adjustHeader = true;
 				sf_free_header* testHeader = freelist_head;
 				while(adjustHeader){
-					printf("%p\n", testHeader);
+					//printf("%p\n", testHeader);
 					if((*testHeader).next != NULL) {
 						testHeader = (*testHeader).next;
 					} else {
@@ -156,17 +156,22 @@ void* sf_malloc(size_t size) {
 
 					//printf("%d\n%d\n", blocks, blocks * PAGE_SIZE);
 
-					fitHeader = (sf_free_header*) sf_sbrk(blocks * PAGE_SIZE);
-					(*fitHeader).header.block_size = blocks * PAGE_SIZE >> 4;
-					(*fitHeader).header.requested_size = size;
-					(*fitHeader).header.alloc = 1;
+					sf_free_header* newHeader = (sf_free_header*) sf_sbrk(blocks * PAGE_SIZE);
+					(*newHeader).header.block_size = blocks * PAGE_SIZE >> 4;
+					(*newHeader).header.requested_size = size;
+					(*newHeader).header.alloc = 1;
 
-					void* fitFooterTemp = (void*) fitHeader;
+					void* fitFooterTemp = (void*) newHeader;
 					fitFooterTemp += 8;
-					fitFooterTemp += ((*fitHeader).header.block_size << 4) - 16;
+					fitFooterTemp += ((*newHeader).header.block_size << 4) - 16;
 					sf_footer* fitFooter = (sf_footer*) fitFooterTemp;
-					(*fitFooter).block_size = (*fitHeader).header.block_size;
+					(*fitFooter).block_size = (*newHeader).header.block_size;
 					(*fitFooter).alloc = 1;
+
+					(*fitHeader).next = newHeader;
+					(*newHeader).prev = fitHeader;
+
+					//printf("%p\n%p\n%p\n", freelist_head, fitHeader, newHeader);
 				}
 			}
 		}
@@ -175,16 +180,80 @@ void* sf_malloc(size_t size) {
 	return NULL;
 }
 
-/* TODO The argument given is the pointer given by sf_alloc. 
-		Don't need to worry about behavior with incorrect pointer given.
-		That is the l_user's fault. */
+/* TODO Coallescing*/
 void sf_free(void *ptr) {
+	sf_header* header = (sf_header*) (ptr - 8);
+	(*header).alloc = 0;
+	void* footerAlign = ptr;
+	footerAlign += ((*header).block_size << 4) - 16;
+	sf_footer* footer = (sf_footer*) footerAlign;
+	(*footer).alloc = 0;
+
+	//printf("%p\n%p\n", ptr, footer);
+
 
 }
 
-/* TODO */
+/* TODO Copy over contents to bigger block 
+		Check that a splinter won't be made when downsizing */
 void* sf_realloc(void *ptr, size_t size) {
-    return NULL;
+	/* If given a size of 0, assume block wants to be freed */
+    if(size == 0) {
+    	/* If given NULL pointer, return sf_malloc(0) */
+    	if(ptr == NULL){
+    		return sf_malloc(0);
+    	} else {
+    		/* Free the pointer */
+    		sf_free(ptr);
+    		return NULL;
+    	}
+    } else {
+    	/* Size is non-zero */
+    	/* No pointer given, return sf_malloc of given size */
+    	if(ptr == NULL) {
+    		return sf_malloc(size);
+    	} else {
+    		/* User wants given malloc to be resized. Let's check if we can. */
+    		/* Is the address within the heap range? */
+    		if(ptr > sf_sbrk(0)){
+    			return NULL;
+    		} else if ((unsigned long) ptr % 16 != 0){
+    			/* Address must be divisibile by 16. */
+    			return NULL;
+    		} else {
+    			sf_header* header = (sf_header*) (ptr - 8);
+    			if((*header).alloc == 0){
+    				return NULL;
+    			} else {
+    				/* We reached this point. We can realloc. Let's do it. */
+    				/* Check to see if growing bigger or smaller */
+    				if(size <= ((*header).block_size >> 4) -32) {
+    					/* Get the size of the block that is going to be made and the leftover block 
+    						avoid splinters */
+    					int i = 0;
+    					int payloadSize = size;
+    					for(; i < 16; i++){
+    						if(payloadSize % 16 != 0){
+    							payloadSize++;
+    						}
+    					}
+    					int newBlockSize = payloadSize + 16;
+    					int leftoverBlockSize = ((*header).block_size >> 4) - newBlockSize;
+    					if(leftoverBlockSize < 32){
+    						/* The new block will be a splinter. Can't do that. Need bigger block */
+
+    					} else {
+    						/* The new block will be a valid free block. We'll be fine, let's do it. */
+    					}
+    				} else {
+    					void* newBlock = sf_malloc(size);
+    					
+    					return newBlock;
+    				}
+    			}
+    		}
+    	}
+    }
 }
 
 void* sf_calloc(size_t nmemb, size_t size) {
