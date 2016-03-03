@@ -54,6 +54,7 @@ int main(int argc, char *argv[]) {
     printf("=== Test1: Allocation test ===\n");
     // Test #1: Allocate an integer
     int *value1 = sf_malloc(sizeof(int));
+    //int * value1 = sf_malloc(4096);
     null_check(value1, sizeof(int));
     payload_check(value1);
     // Print out the allocator block
@@ -103,6 +104,9 @@ int main(int argc, char *argv[]) {
     sf_varprint(memory);
     sf_free(memory);
     press_to_cont();
+
+    // Test sf_calloc
+    printf("=== Test8: Testing calloc ===\n");
 
     return EXIT_SUCCESS;
 }
