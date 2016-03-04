@@ -9,6 +9,9 @@
 #define MAX_HEAP_SIZE (20 * (1 << 20))
 #define VALUE1_VALUE 320
 #define VALUE2_VALUE 0xDEADBEEFF00D
+#define VALUE3_VALUE 10
+#define VALUE4_VALUE 64
+#define VALUE5_VALUE 24
 #define CALLOC_TEST_VALUE 0
 
 #define press_to_cont() do { \
@@ -109,7 +112,7 @@ int main(int argc, char *argv[]) {
 
     // Test sf_calloc
     printf("=== Test8: Testing calloc ===\n");
-    int* callocTest = sf_calloc(1, 4);
+    int* callocTest = sf_calloc(2, 16);
     payload_check(callocTest);
     sf_varprint(callocTest);
     press_to_cont();
@@ -118,8 +121,55 @@ int main(int argc, char *argv[]) {
     
     printf("=== Test9: Testing calloc part 2 ===\n");
     check_prim_contents(callocTest, CALLOC_TEST_VALUE, "%d", "callocTest");
+    callocTest += 1;
+    check_prim_contents(callocTest, CALLOC_TEST_VALUE, "%d", "callocTest");
+    callocTest += 1;
+    check_prim_contents(callocTest, CALLOC_TEST_VALUE, "%d", "callocTest");
+    callocTest += 1;
+    check_prim_contents(callocTest, CALLOC_TEST_VALUE, "%d", "callocTest");
+    callocTest += 1;
+    check_prim_contents(callocTest, CALLOC_TEST_VALUE, "%d", "callocTest");
+    callocTest += 1;
+    check_prim_contents(callocTest, CALLOC_TEST_VALUE, "%d", "callocTest");
+    callocTest += 1;
+    check_prim_contents(callocTest, CALLOC_TEST_VALUE, "%d", "callocTest");
+    callocTest += 1;
+    check_prim_contents(callocTest, CALLOC_TEST_VALUE, "%d", "callocTest");
     press_to_cont();
-    
+
+    printf("=== Test10: Realloc Downsizing===\n");
+    int *value3 = sf_malloc(128);
+    //null_check(value3, 8);
+    payload_check(value3);
+    *value3 = VALUE3_VALUE;
+    sf_varprint(value3);
+    check_prim_contents(value3, VALUE3_VALUE, "%d", "value3");
+    int* reallocTest = (int*) sf_realloc(value3, sizeof(int));
+    sf_varprint(value3);
+    check_prim_contents(reallocTest, VALUE3_VALUE, "%d", "value3");
+    press_to_cont();
+
+    printf("=== Test12: Realloc Same Size ===\n");
+    int *value4 = sf_malloc(sizeof(int));
+    payload_check(value4);
+    *value4 = VALUE4_VALUE;
+    sf_varprint(value4);
+    check_prim_contents(value4, VALUE4_VALUE, "%d", "value4");
+    int* reallocTest2 = (int*) sf_realloc(value4, 8);
+    sf_varprint(value4);
+    check_prim_contents(reallocTest2, VALUE4_VALUE, "%d", "value4");
+    press_to_cont();
+
+    printf("=== Test13: Realloc Upsizing ===\n");
+    int *value5 = sf_malloc(sizeof(int));
+    payload_check(value5);
+    *value5 = VALUE5_VALUE;
+    sf_varprint(value5);
+    check_prim_contents(value5, VALUE5_VALUE, "%d", "value5");
+    int* reallocTest3 = (int*) sf_realloc(value5, 32);
+    sf_varprint(reallocTest3);
+    check_prim_contents(reallocTest3, VALUE5_VALUE, "%d", "value5");
+    press_to_cont();
 
     return EXIT_SUCCESS;
 }

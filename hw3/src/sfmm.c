@@ -5,6 +5,7 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "sfmm.h"
 
 /**
@@ -182,6 +183,7 @@ void* sf_malloc(size_t size) {
 
 /* TODO Coallescing*/
 void sf_free(void *ptr) {
+	//if()
 	sf_header* header = (sf_header*) (ptr - 8);
 	(*header).alloc = 0;
 	void* footerAlign = ptr;
@@ -194,8 +196,6 @@ void sf_free(void *ptr) {
 
 }
 
-/* TODO Copy over contents to bigger block 
-		Check that a splinter won't be made when downsizing */
 void* sf_realloc(void *ptr, size_t size) {
 	/* If given a size of 0, assume block wants to be freed */
     if(size == 0) {
@@ -226,8 +226,12 @@ void* sf_realloc(void *ptr, size_t size) {
     				return NULL;
     			} else {
     				/* We reached this point. We can realloc. Let's do it. */
+
     				/* Check to see if growing bigger or smaller */
-    				if(size <= ((*header).block_size >> 4) -32) {
+    				void* newBlock;
+    				int oldPayloadSize = ((*header).block_size << 4) - 16;
+    				if(size <= oldPayloadSize) {
+    					/* Block growing smaller */
     					/* Get the size of the block that is going to be made and the leftover block 
     						avoid splinters */
     					int i = 0;
@@ -235,19 +239,69 @@ void* sf_realloc(void *ptr, size_t size) {
     					for(; i < 16; i++){
     						if(payloadSize % 16 != 0){
     							payloadSize++;
+    						} else {
+    							break;
     						}
     					}
+    					/* If the payloadSize is the same as the current block, no change needed */
+    					if(payloadSize == oldPayloadSize){
+    						(*header).requested_size = size;
+    						return ptr;
+    					}
     					int newBlockSize = payloadSize + 16;
-    					int leftoverBlockSize = ((*header).block_size >> 4) - newBlockSize;
+    					int oldBlockSize = (*header).block_size << 4;
+    					int leftoverBlockSize = oldBlockSize - newBlockSize;
     					if(leftoverBlockSize < 32){
     						/* The new block will be a splinter. Can't do that. Need bigger block */
-
+    						goto reallocBigger;
     					} else {
     						/* The new block will be a valid free block. We'll be fine, let's do it. */
+    						(*header).alloc = 1;
+    						(*header).requested_size = size;
+    						(*header).block_size = (payloadSize + 16) >> 4;
+    						void* footerRealign = ptr;
+    						footerRealign += ((*header).block_size << 4) - 16;
+    						sf_footer* footer = (sf_footer*) footerRealign;
+    						(*footer).alloc = 1;
+    						(*footer).block_size = (*header).block_size;
+
+    						//printf("%p\n", footer);
+
+    						/* After this point, footerRealign is being reused,
+    							first as a pointer to the next header for the free
+    							block and then as the block to free for the purposes
+    							of coallescing */
+    						footerRealign += 8;
+    						sf_header* newHeader = (sf_header*) footerRealign;
+    						(*newHeader).alloc = 1;
+    						(*newHeader).block_size = newBlockSize >> 4;
+    						void* newFooterRealign = footerRealign;
+    						newFooterRealign += ((*newHeader).block_size << 4) - 16;
+    						sf_footer* newFooter = (sf_footer*) newFooterRealign;
+
+    						//printf("%p\n", newFooter);
+
+    						(*newFooter).alloc = 1;
+    						(*newFooter).block_size = (*newHeader).block_size;
+
+    						footerRealign += 8;
+    						sf_free(footerRealign);
+
+    						return ptr;
     					}
     				} else {
-    					void* newBlock = sf_malloc(size);
-    					
+				reallocBigger: 
+    					newBlock = sf_calloc(1, size);
+    					int i = 0;
+    					char* holder = (char*) ptr;
+    					char* newBlockHolder = (char*) newBlock;
+    					char placer;
+    					for(; i < size; i++){
+    						placer = *holder;
+    						holder += 1;
+    						memset(newBlockHolder, placer, 1);
+    						newBlockHolder += 1;
+    					}
     					return newBlock;
     				}
     			}
@@ -258,12 +312,5 @@ void* sf_realloc(void *ptr, size_t size) {
 
 void* sf_calloc(size_t nmemb, size_t size) {
 	void* mem = sf_malloc(size * nmemb);
-	int i = 0;
-	/* char pointers have size 1. This means we will only overwrite what we want */
-	char* index = mem;
-	for(; i < nmemb * size; i++){
-		*index = 0;
-		index += 1;
-	}
-    return mem;
+    return memset(mem, 0, size * nmemb);
 }
