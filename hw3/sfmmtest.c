@@ -180,7 +180,13 @@ int main(int argc, char *argv[]) {
     check_prim_contents(reallocTest2, VALUE4_VALUE, "%d", "value4");
     press_to_cont();
 
-    printf("=== Test13: Realloc Upsizing ===\n");
+    printf("=== Test13: Confirming old values ===\n");
+    //check_prim_contents(value2, VALUE2_VALUE, "%ld", "value2");
+    check_prim_contents(reallocTest, VALUE3_VALUE, "%d", "value3");
+    check_prim_contents(value4, VALUE4_VALUE, "%d", "value4");
+
+
+    printf("=== Test14: Realloc Upsizing ===\n");
     int *value5 = sf_malloc(sizeof(int));
     payload_check(value5);
     *value5 = VALUE5_VALUE;
