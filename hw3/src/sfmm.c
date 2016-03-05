@@ -14,6 +14,7 @@
  * which will allow you to pass the address to sf_snapshot in a different file.
  */
 sf_free_header* freelist_head = NULL;
+void* bottomOfHeap = NULL;
 
 #define PAGE_SIZE 4096
 
@@ -25,6 +26,7 @@ void* sf_malloc(size_t size) {
 	} else {
 		if(freelist_head == NULL){
 			/* Get the current pointer to the heap and assign it to freelist_head*/
+			bottomOfHeap = sf_sbrk(0);
 			void* pointer = sf_sbrk(PAGE_SIZE);
 			pointer += -8;
 			freelist_head = (sf_free_header*) pointer;
@@ -183,28 +185,111 @@ void* sf_malloc(size_t size) {
 
 /* TODO Coallescing*/
 void sf_free(void *ptr) {
-	//if()
-	sf_header* header = (sf_header*) (ptr - 8);
-	(*header).alloc = 0;
-	void* footerAlign = ptr;
-	footerAlign += ((*header).block_size << 4) - 16;
-	sf_footer* footer = (sf_footer*) footerAlign;
-	(*footer).alloc = 0;
+	if((ptr > sf_sbrk(0)) || (ptr < bottomOfHeap) || ((unsigned long) ptr % 16 != 0)){
+    	/* Invalid pointer */
+    } else {
+    	sf_free_header* header = (sf_free_header*) (ptr - 8);
+		(*header).header.alloc = 0;
+		void* footerAlign = ptr;
+		footerAlign += ((*header).header.block_size << 4) - 16;
+		sf_footer* footer = (sf_footer*) footerAlign;
+		(*footer).alloc = 0;
 
-	//printf("%p\n%p\n", ptr, footer);
+		/* Coallescing */
+		sf_footer* prevFooter = (sf_footer*) (ptr - 16);
+		sf_header* nextHeader = (sf_header*) (footerAlign + 8);
+		/* Check for edge cases */
+		if ((unsigned long) nextHeader > (unsigned long) sf_sbrk(0)){
+			/* The block we freed was at the end of the heap */
+			nextHeader = NULL;
+		} else if ((unsigned long) prevFooter < (unsigned long) bottomOfHeap){
+			/* The block we freed was at the start of the heap */
+			prevFooter = NULL;
+		}
+		/* This is to avoid segfaults by going out of bounds of the heap */
+		int nextAlloc;
+		int prevAlloc;
+		if(nextHeader != NULL && prevFooter != NULL){
+			nextAlloc = (*nextHeader).alloc;
+			prevAlloc = (*prevFooter).alloc;
+		} else if(nextHeader == NULL){
+			nextAlloc = 1;
+			prevAlloc = (*prevFooter).alloc;
+		} else {
+			nextAlloc = (*nextHeader).alloc;
+			prevAlloc = 1;
+		}
+		/* Figure out what case we have */
+		if(nextAlloc == 1 && prevAlloc == 1){
+			/* Case 1. Surrounding blocks are allocated. Do nothing. */
+		} else if (nextAlloc == 0 && prevAlloc == 1){
+			/* Case 2. Coallesce next block. */
+			void* movingPtr = (void*) nextHeader;
+			movingPtr += 8;
+			movingPtr += ((*nextHeader).block_size << 4) - 16;
+			sf_footer* nextFooter = (sf_footer*) movingPtr;
+			int newSize = (*header).header.block_size + (*nextHeader).block_size;
+			(*header).header.block_size = newSize;
+			(*nextFooter).block_size = newSize;
 
+			if((unsigned long) nextHeader == (unsigned long) freelist_head) {
+				freelist_head = header;
+			}
+		} else if (nextAlloc == 1 && prevAlloc == 0){
+			/* Case 3. Coallesce prev block. */
+			int newSize = (*header).header.block_size + (*prevFooter).block_size;
+			void* movingPtr = (void*) prevFooter;
+			movingPtr -= 8;
+			movingPtr -= ((*nextHeader).block_size << 4) - 16;
+			bool isFreeHead = false;
 
+			if((unsigned long) header == (unsigned long) freelist_head){
+				isFreeHead = true;
+			}
+
+			header = (sf_free_header*) movingPtr;
+			(*header).header.block_size = newSize;
+			(*footer).block_size = newSize;
+
+			if(isFreeHead){
+				header = freelist_head;
+			}
+		} else {
+			/* Case 4. Coallesce both blocks. */
+			bool isFreeHead = false;
+			int newSize = (*header).header.block_size + (*prevFooter).block_size + (*nextHeader).block_size;
+
+			void* movingPtr = (void*) nextHeader;
+			movingPtr += 8;
+			movingPtr += ((*nextHeader).block_size << 4) - 16;
+			sf_footer* nextFooter = (sf_footer*) movingPtr;
+
+			movingPtr = (void*) prevFooter;
+			movingPtr -= 8;
+			movingPtr -= ((*nextHeader).block_size << 4) - 16;
+			header = (sf_free_header*) movingPtr;
+
+			(*header).header.block_size = newSize;
+			(*nextFooter).block_size = newSize;
+
+			if((unsigned long) nextHeader == (unsigned long) freelist_head || (unsigned long) header == (unsigned long) freelist_head){
+				isFreeHead = true;
+			}
+			if(isFreeHead) {
+				freelist_head = header;
+			}
+		}
+		/* Done coallescing, update freelist if necessary */
+
+    }
 }
 
 void* sf_realloc(void *ptr, size_t size) {
-	/* If given a size of 0, assume block wants to be freed */
     if(size == 0) {
-    	/* If given NULL pointer, return sf_malloc(0) */
+    	
     	if(ptr == NULL){
     		return sf_malloc(0);
     	} else {
-    		/* Free the pointer */
-    		sf_free(ptr);
     		return NULL;
     	}
     } else {
@@ -215,7 +300,7 @@ void* sf_realloc(void *ptr, size_t size) {
     	} else {
     		/* User wants given malloc to be resized. Let's check if we can. */
     		/* Is the address within the heap range? */
-    		if(ptr > sf_sbrk(0)){
+    		if(ptr > sf_sbrk(0) || ptr < bottomOfHeap){
     			return NULL;
     		} else if ((unsigned long) ptr % 16 != 0){
     			/* Address must be divisibile by 16. */
