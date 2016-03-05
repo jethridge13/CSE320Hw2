@@ -183,7 +183,6 @@ void* sf_malloc(size_t size) {
 	return NULL;
 }
 
-/* TODO Coallescing*/
 void sf_free(void *ptr) {
 	if((ptr > sf_sbrk(0)) || (ptr < bottomOfHeap) || ((unsigned long) ptr % 16 != 0)){
     	/* Invalid pointer */
@@ -280,7 +279,28 @@ void sf_free(void *ptr) {
 			}
 		}
 		/* Done coallescing, update freelist if necessary */
-
+		if((unsigned long) header != (unsigned long) freelist_head){
+			(*header).next = NULL;
+			(*header).prev = NULL;
+			/* The new block and the freelist_head are two separate blocks. 
+				They must be linked. */
+			if((unsigned long) header > (unsigned long) freelist_head) {
+				sf_free_header* headerLink = freelist_head;
+				while((*headerLink).next != NULL){
+					headerLink = (*headerLink).next;
+				}
+				(*headerLink).next = header;
+				(*header).prev = headerLink;
+			} else {
+				sf_free_header* headerLink = freelist_head;
+				while((*headerLink).prev != NULL){
+					headerLink = (*headerLink).prev;
+				}
+				(*headerLink).prev = header;
+				(*header).next = headerLink;
+				freelist_head = header;
+			}
+		}
     }
 }
 
