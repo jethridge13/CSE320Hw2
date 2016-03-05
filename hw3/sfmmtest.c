@@ -107,9 +107,11 @@ int main(int argc, char *argv[]) {
     sf_varprint(value1);
     press_to_cont();
 
+    /*
     testPtr = (void*) freelist_head;
     testPtr += 8;
     sf_varprint(testPtr);
+    */
 
     // Allocate more memory
     printf("=== Test7: 8192 byte allocation ===\n");
@@ -118,9 +120,11 @@ int main(int argc, char *argv[]) {
     sf_free(memory);
     press_to_cont();
 
+    /*
     testPtr = (void*) freelist_head;
     testPtr += 8;
     sf_varprint(testPtr);
+    */
 
     // Test sf_calloc
     printf("=== Test8: Testing calloc ===\n");
@@ -129,9 +133,11 @@ int main(int argc, char *argv[]) {
     sf_varprint(callocTest);
     press_to_cont();
 
+    /*
     testPtr = (void*) freelist_head;
     testPtr += 8;
     sf_varprint(testPtr);
+    */
 
     // Test sf_calloc part 2
     
@@ -153,9 +159,11 @@ int main(int argc, char *argv[]) {
     check_prim_contents(callocTest, CALLOC_TEST_VALUE, "%d", "callocTest");
     press_to_cont();
 
+    /*
     testPtr = (void*) freelist_head;
     testPtr += 8;
     sf_varprint(testPtr);
+    */
 
     printf("=== Test10: Realloc Downsizing===\n");
     int *value3 = sf_malloc(128);

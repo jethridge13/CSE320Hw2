@@ -445,6 +445,8 @@ void* sf_realloc(void *ptr, size_t size) {
 }
 
 void* sf_calloc(size_t nmemb, size_t size) {
+	/* Unless I'm mistaken, the size is just nmemb * size
+		since it wants nmemb units of size size */
 	void* mem = sf_malloc(size * nmemb);
     return memset(mem, 0, size * nmemb);
 }
