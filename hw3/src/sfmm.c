@@ -43,8 +43,17 @@ void* sf_malloc(size_t size) {
 
 			//printf("%p\n", freelist_head);
 
-			/* Freelist now instantiated? */
+			/* Freelist now instantiated */
 		}
+
+		/*
+		if((*freelist_head).prev != NULL){
+			freelist_head = (*freelist_head).prev;
+			if((unsigned long) freelist_head == (unsigned long) (*freelist_head).prev){
+				(*freelist_head).prev = NULL;
+			}
+		}
+		*/
 
 		void* pointer = (void*) freelist_head;
 		pointer += 8;
@@ -91,7 +100,7 @@ void* sf_malloc(size_t size) {
 
 				void* blockFooter = pointer;
 				blockFooter += ((*header).block_size << 4) - 16;
-				struct sf_footer * bFooter = (sf_footer*) blockFooter;
+				sf_footer * bFooter = (sf_footer*) blockFooter;
 				(*bFooter).alloc = 1;
 				(*bFooter).block_size = (*header).block_size;
 
@@ -112,10 +121,14 @@ void* sf_malloc(size_t size) {
 				footerRealign += ((*fitHeader).header.block_size << 4) - 16;
 				sf_footer* freeFooter = (sf_footer*) footerRealign;
 				(*freeFooter).block_size = (*fitHeader).header.block_size;
-
 				sf_free_header* tempHeader = freelist_head;
 				while((*tempHeader).next != NULL){
 					tempHeader = (*tempHeader).next;
+					/*
+					if((unsigned long) tempHeader == (unsigned long) (*tempHeader).next){
+						(*tempHeader).next = NULL;
+					}
+					*/
 				}
 				/* tempHeader.next now equals NULL */
 				(*tempHeader).next = fitHeader;
@@ -129,7 +142,7 @@ void* sf_malloc(size_t size) {
 					}
 				}
 
-				/* TODO Test thing, delete before submission */
+				/* TODO Test thing, delete before submission *
 				adjustHeader = true;
 				sf_free_header* testHeader = freelist_head;
 				while(adjustHeader){
@@ -140,7 +153,7 @@ void* sf_malloc(size_t size) {
 						adjustHeader = false;
 					}
 				}
-
+				*/
 
 				//printf("%p\n", freeFooter);
 
@@ -161,7 +174,7 @@ void* sf_malloc(size_t size) {
 
 					sf_free_header* newHeader = (sf_free_header*) sf_sbrk(blocks * PAGE_SIZE);
 					(*newHeader).header.block_size = blocks * PAGE_SIZE >> 4;
-					(*newHeader).header.requested_size = size;
+					//(*newHeader).header.requested_size = size;
 					(*newHeader).header.alloc = 1;
 
 					void* fitFooterTemp = (void*) newHeader;
@@ -279,11 +292,12 @@ void sf_free(void *ptr) {
 			}
 		}
 		/* Done coallescing, update freelist if necessary */
+		/*
 		if((unsigned long) header != (unsigned long) freelist_head){
 			(*header).next = NULL;
 			(*header).prev = NULL;
-			/* The new block and the freelist_head are two separate blocks. 
-				They must be linked. */
+			* The new block and the freelist_head are two separate blocks. 
+				They must be linked. *
 			if((unsigned long) header > (unsigned long) freelist_head) {
 				sf_free_header* headerLink = freelist_head;
 				while((*headerLink).next != NULL){
@@ -300,7 +314,7 @@ void sf_free(void *ptr) {
 				(*header).next = headerLink;
 				freelist_head = header;
 			}
-		}
+		} */
     }
 }
 
