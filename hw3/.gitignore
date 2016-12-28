@@ -1,4 +1,0 @@
-*.o 
-lib/*.o
-sfmmtest
-a.out
